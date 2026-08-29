@@ -1,0 +1,43 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                String   @id @default(uuid())
+  username          String
+  email             String   @unique
+  passwordHash      String?  @map("password_hash")
+  googleId          String?  @unique @map("google_id")
+  createdAt         DateTime @default(now()) @map("created_at")
+  words             Word[]
+
+  @@map("users")
+}
+
+model Word {
+  id              String    @id @default(uuid())
+  userId          String    @map("user_id")
+  word            String
+  meaning         String
+  dateAdded       DateTime  @default(now()) @map("date_added")
+  fsrsStability   Float     @default(1.0) @map("fsrs_stability")
+  fsrsDifficulty  Float     @default(5.0) @map("fsrs_difficulty")
+  fsrsLapses      Int       @default(0) @map("fsrs_lapses")
+  fsrsReps        Int       @default(0) @map("fsrs_reps")
+  fsrsState       String    @default("New") @map("fsrs_state")
+  lastReview      DateTime? @map("last_review")
+  nextReview      DateTime  @default(now()) @map("next_review")
+  reviewCount     Int       @default(0) @map("review_count")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, word])
+  @@map("words")
+}
