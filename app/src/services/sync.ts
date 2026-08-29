@@ -20,6 +20,8 @@ let isSyncing = false;
 export async function queueCloudChange(wordId: string, action: string, data: Record<string, unknown>) {
   if (!useAppStore.getState().isAuthenticated) return;
   await addSyncQueueItem(wordId, action, data);
+  // Automatically push the change to the cloud in the background
+  triggerSync(true).catch(console.error);
 }
 
 export function wordKey(w: Word): string {

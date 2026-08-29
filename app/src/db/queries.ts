@@ -5,7 +5,7 @@ import { Word } from '../store/useAppStore';
 
 export const getWords = async (): Promise<Word[]> => {
   const db = await getDB();
-  const allRows = await db.getAllAsync('SELECT * FROM words;');
+  const allRows = await db.getAllAsync('SELECT * FROM words ORDER BY dateAdded ASC, rowid ASC;');
   return allRows as Word[];
 };
 

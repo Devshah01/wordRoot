@@ -200,26 +200,30 @@ export default function ReviewScreen() {
       return (
         <SafeAreaView style={s.container} edges={['top']}>
           <View style={s.content}>
-            <View style={s.overviewHeader}>
-              <Text style={s.overviewHeaderTitle}>Review</Text>
-            </View>
-
-            <View style={s.emptyContainer}>
-              <View style={s.emptyIconCircle}>
-                <CheckCircle2 size={48} color={COLORS.charcoal} strokeWidth={1.5} />
+            
+              <View style={s.overviewHeader}>
+                <Text style={s.overviewHeaderTitle}>Review</Text>
               </View>
-              <Text style={s.emptyTitle}>All Caught Up!</Text>
-              <Text style={s.emptySub}>
-                No reviews are pending right now. All your vocabulary cards are up to date with your FSRS schedule.
-              </Text>
-              <TouchableOpacity
-                onPress={() => router.replace('/(tabs)/dashboard')}
-                style={s.goToDashboardBtn}
-                activeOpacity={0.8}
-              >
-                <Text style={s.goToDashboardBtnText}>Go to Dashboard</Text>
-              </TouchableOpacity>
-            </View>
+            
+
+            
+              <View style={s.emptyContainer}>
+                <View style={s.emptyIconCircle}>
+                  <CheckCircle2 size={48} color={COLORS.charcoal} strokeWidth={1.5} />
+                </View>
+                <Text style={s.emptyTitle}>All Caught Up!</Text>
+                <Text style={s.emptySub}>
+                  No reviews are pending right now. All your vocabulary cards are up to date with your FSRS schedule.
+                </Text>
+                <TouchableOpacity
+                  onPress={() => router.replace('/(tabs)/dashboard')}
+                  style={s.goToDashboardBtn}
+                  activeOpacity={0.8}
+                >
+                  <Text style={s.goToDashboardBtnText}>Go to Dashboard</Text>
+                </TouchableOpacity>
+              </View>
+            
           </View>
         </SafeAreaView>
       );
@@ -229,57 +233,61 @@ export default function ReviewScreen() {
     return (
       <SafeAreaView style={s.container} edges={['top']}>
         <View style={s.content}>
-          <View style={s.overviewHeader}>
-            <Text style={s.overviewHeaderTitle}>Vocabulary Review</Text>
-            <View style={s.pendingBadgeTop}>
-              <Text style={s.pendingBadgeTopText}>
-                {pendingGroups.reduce((acc, g) => acc + g.count, 0)} Total Due
-              </Text>
+          
+            <View style={s.overviewHeader}>
+              <Text style={s.overviewHeaderTitle}>Vocabulary Review</Text>
+              <View style={s.pendingBadgeTop}>
+                <Text style={s.pendingBadgeTopText}>
+                  {pendingGroups.reduce((acc, g) => acc + g.count, 0)} Total Due
+                </Text>
+              </View>
             </View>
-          </View>
+          
 
           <ScrollView
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: insets.bottom + 90 }}
           >
             {/* Main Pending Group Card */}
-            <View style={s.mainBatchCard}>
-              <View style={s.batchCardHeader}>
-                <View style={s.sparkleIconWrap}>
-                  <Sparkles size={22} color={COLORS.charcoal} strokeWidth={2} />
+            
+              <View style={s.mainBatchCard}>
+                <View style={s.batchCardHeader}>
+                  <View style={s.sparkleIconWrap}>
+                    <Sparkles size={22} color={COLORS.charcoal} strokeWidth={2} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.batchLabel}>Next Due Batch</Text>
+                    <Text style={s.batchDateText}>{formatDateDisplay(selectedGroup.date)}</Text>
+                  </View>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={s.batchLabel}>Next Due Batch</Text>
-                  <Text style={s.batchDateText}>{formatDateDisplay(selectedGroup.date)}</Text>
+
+                <View style={s.batchStatRow}>
+                  <View style={s.batchStatBox}>
+                    <Text style={s.batchStatNum}>{selectedGroup.count}</Text>
+                    <Text style={s.batchStatLabel}>Words to Review</Text>
+                  </View>
+                  <View style={s.batchStatDivider} />
+                  <View style={s.batchStatBox}>
+                    <Text style={s.batchStatNum}>FSRS</Text>
+                    <Text style={s.batchStatLabel}>Spaced Repetition</Text>
+                  </View>
                 </View>
+
+                <Text style={s.batchDescription}>
+                  Reviewing today strengthens memory retention before forgetting occurs according to your interval schedule.
+                </Text>
+
+                {/* Start Review CTA Button */}
+                <TouchableOpacity
+                  onPress={() => handleStartReview(selectedGroup)}
+                  style={s.startReviewCTA}
+                  activeOpacity={0.85}
+                >
+                  <Play size={20} color={COLORS.bg} fill={COLORS.bg} />
+                  <Text style={s.startReviewCTAText}>Start Review</Text>
+                </TouchableOpacity>
               </View>
-
-              <View style={s.batchStatRow}>
-                <View style={s.batchStatBox}>
-                  <Text style={s.batchStatNum}>{selectedGroup.count}</Text>
-                  <Text style={s.batchStatLabel}>Words to Review</Text>
-                </View>
-                <View style={s.batchStatDivider} />
-                <View style={s.batchStatBox}>
-                  <Text style={s.batchStatNum}>FSRS</Text>
-                  <Text style={s.batchStatLabel}>Spaced Repetition</Text>
-                </View>
-              </View>
-
-              <Text style={s.batchDescription}>
-                Reviewing today strengthens memory retention before forgetting occurs according to your interval schedule.
-              </Text>
-
-              {/* Start Review CTA Button */}
-              <TouchableOpacity
-                onPress={() => handleStartReview(selectedGroup)}
-                style={s.startReviewCTA}
-                activeOpacity={0.85}
-              >
-                <Play size={20} color={COLORS.bg} fill={COLORS.bg} />
-                <Text style={s.startReviewCTAText}>Start Review</Text>
-              </TouchableOpacity>
-            </View>
+            
 
             {/* If there are more pending groups, display them as a list */}
             {pendingGroups.length > 1 && (
@@ -288,25 +296,26 @@ export default function ReviewScreen() {
                 {pendingGroups
                   .filter((g) => g.date !== selectedGroup.date)
                   .map((group, index) => (
-                    <TouchableOpacity
-                      key={index}
-                      onPress={() => setSelectedGroup(group)}
-                      style={s.otherGroupRow}
-                      activeOpacity={0.7}
-                    >
-                      <View style={s.otherGroupLeft}>
-                        <View style={s.otherGroupCalIcon}>
-                          <BookOpen size={18} color={COLORS.charcoal} />
+                      <TouchableOpacity
+                        key={index}
+                        onPress={() => setSelectedGroup(group)}
+                        style={s.otherGroupRow}
+                        activeOpacity={0.7}
+                      >
+                        <View style={s.otherGroupLeft}>
+                          <View style={s.otherGroupCalIcon}>
+                            <BookOpen size={18} color={COLORS.charcoal} />
+                          </View>
+                          <View>
+                            <Text style={s.otherGroupDate}>{formatDateDisplay(group.date)}</Text>
+                            <Text style={s.otherGroupCount}>{group.count} Words Pending</Text>
+                          </View>
                         </View>
-                        <View>
-                          <Text style={s.otherGroupDate}>{formatDateDisplay(group.date)}</Text>
-                          <Text style={s.otherGroupCount}>{group.count} Words Pending</Text>
+                        <View style={s.otherGroupSelectBtn}>
+                          <ArrowRight size={16} color={COLORS.charcoal} />
                         </View>
-                      </View>
-                      <View style={s.otherGroupSelectBtn}>
-                        <ArrowRight size={16} color={COLORS.charcoal} />
-                      </View>
-                    </TouchableOpacity>
+                      </TouchableOpacity>
+                    
                   ))}
               </View>
             )}
@@ -322,22 +331,24 @@ export default function ReviewScreen() {
   if (currentIndex >= sessionWords.length) {
     return (
       <SafeAreaView style={s.container} edges={['top']}>
-        <View style={[s.content, s.center, { paddingBottom: Math.max(insets.bottom, 20) + 24 }]}>
-          <View style={s.completeCircle}>
-            <CheckCircle2 size={56} color={COLORS.charcoal} strokeWidth={1.5} />
+        
+          <View style={[s.content, s.center, { paddingBottom: Math.max(insets.bottom, 20) + 24 }]}>
+            <View style={s.completeCircle}>
+              <CheckCircle2 size={56} color={COLORS.charcoal} strokeWidth={1.5} />
+            </View>
+            <Text style={s.completeTitle}>Batch Completed! 🎉</Text>
+            <Text style={s.completeSub}>
+              You've successfully reviewed all {sessionWords.length} words for {formatDateDisplay(selectedGroup?.date || '')}.
+            </Text>
+            <TouchableOpacity
+              onPress={handleExitSession}
+              style={s.goToDashboardBtn}
+              activeOpacity={0.8}
+            >
+              <Text style={s.goToDashboardBtnText}>Back to Reviews</Text>
+            </TouchableOpacity>
           </View>
-          <Text style={s.completeTitle}>Batch Completed! 🎉</Text>
-          <Text style={s.completeSub}>
-            You've successfully reviewed all {sessionWords.length} words for {formatDateDisplay(selectedGroup?.date || '')}.
-          </Text>
-          <TouchableOpacity
-            onPress={handleExitSession}
-            style={s.goToDashboardBtn}
-            activeOpacity={0.8}
-          >
-            <Text style={s.goToDashboardBtnText}>Back to Reviews</Text>
-          </TouchableOpacity>
-        </View>
+        
       </SafeAreaView>
     );
   }

@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
-import { ChevronLeft, ChevronRight, Trash2, Edit2, X, Search, BookOpen, ArrowLeft } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Trash2, Edit2, X, Search, BookOpen, ArrowLeft, Plus } from 'lucide-react-native';
 import { useAppStore } from '../../store/useAppStore';
 import { APP_COLORS } from '../../constants/theme';
 import { formatLocalDateString } from '../../services/localData';
@@ -42,9 +42,8 @@ export default function CalendarScreen() {
   const [currentYear, setCurrentYear] = useState<number>(new Date().getFullYear());
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isYearPickerOpen, setIsYearPickerOpen] = useState(false);
-  const [editingWord, setEditingWord] = useState<any | null>(null);
-  const [wordText, setWordText] = useState('');
-  const [meaningText, setMeaningText] = useState('');
+  const [calendarDrafts, setCalendarDrafts] = useState<any[]>([]);
+  const [calendarEditedWords, setCalendarEditedWords] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchActive, setIsSearchActive] = useState(false);
 
@@ -131,75 +130,96 @@ export default function CalendarScreen() {
     else setCurrentMonth(currentMonth + 1);
   };
 
-  const handleSaveWord = async () => {
-    if (!wordText.trim() || !meaningText.trim()) return;
-    try {
-      if (editingWord) {
-        const updatedWord = {
-          ...editingWord,
-          word: wordText.trim().toLowerCase(),
-          meaning: meaningText.trim(),
-        };
-        // Offline-first: always update local SQLite first
-        await saveWord(updatedWord);
-        await queueCloudChange(editingWord.id, 'update', {
-          word: updatedWord.word,
-          meaning: updatedWord.meaning,
-          updatedWord,
-        });
-      } else {
-        const now = new Date();
-        const isSelectedToday = formatLocalDateString(selectedDate) === formatLocalDateString(now);
-        const wordDate = isSelectedToday
-          ? now.toISOString()
-          : new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 12, 0, 0).toISOString();
+  const handleSaveCalendarVocab = async () => {
+    const validDrafts = calendarDrafts.filter((line) => line.word.trim() && line.meaning.trim());
+    
+    // Find modified saved words
+    const originalSelectedWords = allWords.filter((w) => {
+      const dStr = formatLocalDateString(w.dateAdded || new Date());
+      return dStr === selectedDateStr && !w.isDraft;
+    });
+      
+    const modifiedWords = calendarEditedWords.filter((editedWord, i) => {
+      const original = originalSelectedWords.find(w => w.id === editedWord.id);
+      return original && (original.word !== editedWord.word.trim().toLowerCase() || original.meaning !== editedWord.meaning.trim());
+    }).filter(w => w.word.trim() && w.meaning.trim());
 
-        const newWord = {
-          id: Crypto.randomUUID(),
-          word: wordText.trim().toLowerCase(),
-          meaning: meaningText.trim(),
-          dateAdded: wordDate,
-          fsrsStability: 1.0,
-          fsrsDifficulty: 5.0,
-          fsrsLapses: 0,
-          fsrsReps: 0,
-          fsrsState: 'New',
-          lastReview: null,
-          nextReview: wordDate,
-          reviewCount: 0,
-        };
-        await saveWordsBulk([newWord]);
-        await queueCloudChange(newWord.id, 'add', {
-          word: newWord.word,
-          meaning: newWord.meaning,
-          dateAdded: newWord.dateAdded,
-          fsrsStability: newWord.fsrsStability,
-          fsrsDifficulty: newWord.fsrsDifficulty,
-          fsrsLapses: newWord.fsrsLapses,
-          fsrsReps: newWord.fsrsReps,
-          fsrsState: newWord.fsrsState,
-          lastReview: newWord.lastReview,
-          nextReview: newWord.nextReview,
-          reviewCount: newWord.reviewCount,
+    if (validDrafts.length === 0 && modifiedWords.length === 0) {
+      setIsEditorOpen(false);
+      return;
+    }
+
+    try {
+      const now = new Date();
+      const isSelectedToday = formatLocalDateString(selectedDate) === formatLocalDateString(now);
+      const wordDate = isSelectedToday
+        ? now.toISOString()
+        : new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 12, 0, 0).toISOString();
+
+      const newWords = validDrafts.map((entry) => ({
+        id: Crypto.randomUUID(),
+        word: entry.word.trim().toLowerCase(),
+        meaning: entry.meaning.trim(),
+        dateAdded: wordDate,
+        fsrsStability: 1.0,
+        fsrsDifficulty: 5.0,
+        fsrsLapses: 0,
+        fsrsReps: 0,
+        fsrsState: 'New',
+        lastReview: null,
+        nextReview: wordDate,
+        reviewCount: 0,
+      }));
+
+      const finalModifiedWords = modifiedWords.map(w => ({
+        ...w,
+        word: w.word.trim().toLowerCase(),
+        meaning: w.meaning.trim(),
+      }));
+
+      if (newWords.length > 0 || finalModifiedWords.length > 0) {
+        await saveWordsBulk([...newWords, ...finalModifiedWords]);
+      }
+
+      for (const word of newWords) {
+        await queueCloudChange(word.id, 'add', {
+          ...word
         });
       }
-      // Always refresh local DB view
+      
+      for (const word of finalModifiedWords) {
+        await queueCloudChange(word.id, 'update', {
+          word: word.word,
+          meaning: word.meaning,
+          updatedWord: word,
+        });
+      }
+
+      setCalendarDrafts([{ word: '', meaning: '' }]);
+      setCalendarEditedWords([]);
+      setIsEditorOpen(false);
       await loadLocalDatabase();
-    } catch (err: any) { alert(err.message || 'Failed to update word'); }
-    setIsEditorOpen(false); setEditingWord(null); setWordText(''); setMeaningText('');
+    } catch (err: any) {
+      alert(err.message || 'Failed to save words');
+    }
   };
 
   const handleDeleteWord = async (word: any) => {
     try {
       await deleteWord(word.id);
       await queueCloudChange(word.id, 'delete', {});
+      setCalendarEditedWords(prev => prev.filter(w => w.id !== word.id));
       await loadLocalDatabase();
     } catch (err: any) { alert(err.message || 'Failed to delete word'); }
   };
 
-  const openEditor = (word: any = null) => {
-    if (word) { setEditingWord(word); setWordText(word.word); setMeaningText(word.meaning); }
-    else { setEditingWord(null); setWordText(''); setMeaningText(''); }
+  const openEditor = () => {
+    const originalSelectedWords = allWords.filter((w) => {
+      const dStr = formatLocalDateString(w.dateAdded || new Date());
+      return dStr === selectedDateStr && !w.isDraft;
+    });
+    setCalendarEditedWords(JSON.parse(JSON.stringify(originalSelectedWords)));
+    setCalendarDrafts(Array(5).fill(null).map(() => ({ word: '', meaning: '' })));
     setIsEditorOpen(true);
   };
 
@@ -265,115 +285,198 @@ export default function CalendarScreen() {
     <SafeAreaView style={s.container} edges={['top']}>
       <View style={s.content}>
         {/* Month Navigation */}
-        <View style={s.monthNav}>
-          <TouchableOpacity onPress={() => setIsYearPickerOpen(true)}>
-            <Text style={s.monthTitle}>
-              {MONTHS[currentMonth]} {currentYear}
-            </Text>
-          </TouchableOpacity>
-          <View style={s.monthArrows}>
-            <TouchableOpacity onPress={() => setIsSearchActive(true)} style={s.iconBtn}>
-              <Search size={24} color={COLORS.charcoal} strokeWidth={2.5} />
+        
+          <View style={s.monthNav}>
+            <TouchableOpacity onPress={() => setIsYearPickerOpen(true)}>
+              <Text style={s.monthTitle}>
+                {MONTHS[currentMonth]} {currentYear}
+              </Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={prevMonth} style={s.iconBtn}>
-              <ChevronLeft size={24} color={COLORS.charcoal} strokeWidth={2.5} />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={nextMonth} style={s.iconBtn}>
-              <ChevronRight size={24} color={COLORS.charcoal} strokeWidth={2.5} />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Weekday Headers */}
-        <View style={s.weekRow}>
-          {WEEKDAYS.map((day, idx) => (
-            <Text key={idx} style={s.weekLabel}>{day}</Text>
-          ))}
-        </View>
-
-        {/* Calendar Grid with borders */}
-        <View style={s.gridContainer}>
-          {renderCalendarGrid()}
-        </View>
-
-        {/* Selected Day Details */}
-        <View style={s.selectedHeader}>
-          <View>
-            <Text style={s.selectedTitle}>
-              {selectedDay} {selectedMonthName} {selectedYear}
-            </Text>
-            <Text style={s.selectedSub}>
-              {selectedDateWords.length} Words Added
-            </Text>
-          </View>
-          <TouchableOpacity onPress={() => openEditor()} style={s.iconBtn}>
-            <Edit2 size={24} color={COLORS.charcoal} strokeWidth={2.5} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Word List Box - Perfectly sized above bottom navigation bar with scrollable items inside */}
-        <View style={[s.vocabCard, { marginBottom: insets.bottom + 84 }]}>
-          {selectedDateWords.length === 0 ? (
-            <View style={s.emptyVocabContent}>
-              <BookOpen size={40} color={COLORS.bone} strokeWidth={1.5} style={{ marginBottom: 12 }} />
-              <Text style={s.emptyText}>No words logged for this day.</Text>
-            </View>
-          ) : (
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              style={{ flex: 1 }}
-              contentContainerStyle={{ paddingVertical: 4 }}
-            >
-              {selectedDateWords.map((item, index) => (
-                <View key={index} style={[s.wordCard, index === selectedDateWords.length - 1 && { borderBottomWidth: 0 }]}>
-                  <Text style={s.wordRowNum}>{index + 1}.</Text>
-                  <View style={{ flex: 1, marginRight: 12, flexDirection: 'row', alignItems: 'center' }}>
-                    <Text style={s.wordTitle}>{item.word}</Text>
-                    {item.isDraft && (
-                      <View style={{ backgroundColor: COLORS.lightgray, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2, marginLeft: 8 }}>
-                        <Text style={{ fontFamily: 'Inter_500Medium', fontSize: 10, color: COLORS.warmgray }}>Draft</Text>
-                      </View>
-                    )}
-                    <View style={s.wordDivider} />
-                    <Text style={s.wordMeaning}>{item.meaning}</Text>
-                  </View>
-                  {!item.isDraft && (
-                    <TouchableOpacity onPress={() => handleDeleteWord(item)} style={s.iconBtnSm}>
-                      <Trash2 size={18} color="#EF4444" strokeWidth={2} />
-                    </TouchableOpacity>
-                  )}
-                </View>
-              ))}
-            </ScrollView>
-          )}
-        </View>
-
-        {/* ========== ADD / EDIT MODAL ========== */}
-        <Modal visible={isEditorOpen} animationType="fade" transparent>
-          <View style={s.modalOverlay}>
-            <View style={s.dialogBox}>
-              <View style={s.dialogHeader}>
-                <Text style={s.dialogTitle}>{editingWord ? 'Edit Vocabulary' : 'Add Vocabulary'}</Text>
-                <TouchableOpacity onPress={() => setIsEditorOpen(false)}>
-                  <X size={20} color={COLORS.charcoal} />
-                </TouchableOpacity>
-              </View>
-              <Text style={s.fieldLabel}>English Word</Text>
-              <TextInput
-                placeholder="e.g. resilient" placeholderTextColor={COLORS.warmgray}
-                value={wordText} onChangeText={setWordText}
-                style={s.fieldInput} autoCapitalize="none"
-              />
-              <Text style={[s.fieldLabel, { marginTop: 16 }]}>Meaning</Text>
-              <TextInput
-                placeholder="e.g. description" placeholderTextColor={COLORS.warmgray}
-                value={meaningText} onChangeText={setMeaningText} style={s.fieldInput}
-              />
-              <TouchableOpacity onPress={handleSaveWord} style={s.dialogSaveBtn}>
-                <Text style={s.dialogSaveBtnText}>Save Changes</Text>
+            <View style={s.monthArrows}>
+              <TouchableOpacity onPress={() => setIsSearchActive(true)} style={s.iconBtn}>
+                <Search size={24} color={COLORS.charcoal} strokeWidth={2.5} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={prevMonth} style={s.iconBtn}>
+                <ChevronLeft size={24} color={COLORS.charcoal} strokeWidth={2.5} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={nextMonth} style={s.iconBtn}>
+                <ChevronRight size={24} color={COLORS.charcoal} strokeWidth={2.5} />
               </TouchableOpacity>
             </View>
           </View>
+        
+
+        {/* Weekday Headers */}
+        
+          <View style={s.weekRow}>
+            {WEEKDAYS.map((day, idx) => (
+              <Text key={idx} style={s.weekLabel}>{day}</Text>
+            ))}
+          </View>
+        
+
+        {/* Calendar Grid with borders */}
+        
+          <View style={s.gridContainer}>
+            {renderCalendarGrid()}
+          </View>
+        
+
+        {/* Selected Day Details */}
+        
+          <View style={s.selectedHeader}>
+            <View>
+              <Text style={s.selectedTitle}>
+                {selectedDay} {selectedMonthName} {selectedYear}
+              </Text>
+              <Text style={s.selectedSub}>
+                {selectedDateWords.length} Words Added
+              </Text>
+            </View>
+            <TouchableOpacity onPress={() => openEditor()} style={s.iconBtn}>
+              <Edit2 size={24} color={COLORS.charcoal} strokeWidth={2.5} />
+            </TouchableOpacity>
+          </View>
+        
+
+        {/* Word List Box - Perfectly sized above bottom navigation bar with scrollable items inside */}
+        
+          <View style={[s.vocabCard, { marginBottom: insets.bottom + 84 }]}>
+            {selectedDateWords.length === 0 ? (
+              <View style={s.emptyVocabContent}>
+                <BookOpen size={40} color={COLORS.bone} strokeWidth={1.5} style={{ marginBottom: 12 }} />
+                <Text style={s.emptyText}>No words logged for this day.</Text>
+              </View>
+            ) : (
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                style={{ flex: 1 }}
+                contentContainerStyle={{ paddingVertical: 4 }}
+              >
+                {selectedDateWords.map((item, index) => (
+                    <View key={index} style={[s.wordCard, index === selectedDateWords.length - 1 && { borderBottomWidth: 0 }]}>
+                      <Text style={s.wordRowNum}>{index + 1}.</Text>
+                      <View style={{ flex: 1, marginRight: 12, flexDirection: 'row', alignItems: 'center' }}>
+                        <Text style={s.wordTitle}>{item.word}</Text>
+                        {item.isDraft && (
+                          <View style={{ backgroundColor: COLORS.lightgray, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2, marginLeft: 8 }}>
+                            <Text style={{ fontFamily: 'Inter_500Medium', fontSize: 10, color: COLORS.warmgray }}>Draft</Text>
+                          </View>
+                        )}
+                        <View style={s.wordDivider} />
+                        <Text style={s.wordMeaning}>{item.meaning}</Text>
+                      </View>
+                      {!item.isDraft && (
+                        <TouchableOpacity onPress={() => handleDeleteWord(item)} style={s.iconBtnSm}>
+                          <Trash2 size={18} color="#EF4444" strokeWidth={2} />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  
+                ))}
+              </ScrollView>
+            )}
+          </View>
+        
+
+
+        {/* ========== EXPANDED VOCAB MODAL ========== */}
+        <Modal visible={isEditorOpen} animationType="fade" transparent={false}>
+          <SafeAreaView style={[s.container, { paddingHorizontal: 12 }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 24, marginTop: 12 }}>
+              <TouchableOpacity onPress={() => setIsEditorOpen(false)} style={{ marginRight: 16 }}>
+                <ArrowLeft size={28} color={COLORS.charcoal} />
+              </TouchableOpacity>
+              <View style={s.datePill}>
+                <Text style={s.datePillText}>
+                  {selectedDay}  |  {selectedMonthName.substring(0, 3)}  |  {selectedYear}
+                </Text>
+              </View>
+              <View style={{ flex: 1 }} />
+              <TouchableOpacity onPress={handleSaveCalendarVocab} style={s.savePill}>
+                <Text style={s.savePillText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+              {calendarEditedWords.map((word, index) => (
+                  <View key={`saved-${index}`} style={s.wordRow}>
+                    <Text style={s.wordRowNum}>{index + 1}.</Text>
+                    <View style={s.wordRowContent}>
+                      <TextInput
+                        style={s.wordInputSaved}
+                        value={word.word}
+                        onChangeText={(val) => {
+                          const newArr = [...calendarEditedWords];
+                          newArr[index].word = val;
+                          setCalendarEditedWords(newArr);
+                        }}
+                        autoCapitalize="none"
+                      />
+                      <View style={s.rowDivider} />
+                      <TextInput
+                        style={s.meaningInputSaved}
+                        value={word.meaning}
+                        onChangeText={(val) => {
+                          const newArr = [...calendarEditedWords];
+                          newArr[index].meaning = val;
+                          setCalendarEditedWords(newArr);
+                        }}
+                      />
+                    </View>
+                    <TouchableOpacity style={s.wordRowIcon} onPress={() => handleDeleteWord(word)}>
+                      <Trash2 size={20} color="#E74C3C" />
+                    </TouchableOpacity>
+                  </View>
+                
+              ))}
+
+              {calendarDrafts.map((line, index) => (
+                  <View key={`draft-${index}`} style={s.wordRow}>
+                    <Text style={s.wordRowNum}>{calendarEditedWords.length + index + 1}.</Text>
+                    <View style={s.wordRowContent}>
+                      <TextInput
+                        placeholder="Word"
+                        placeholderTextColor={COLORS.warmgray}
+                        value={line.word}
+                        onChangeText={(val) => {
+                          const newArr = [...calendarDrafts];
+                          newArr[index].word = val;
+                          setCalendarDrafts(newArr);
+                        }}
+                        style={s.wordInput}
+                        autoCapitalize="none"
+                      />
+                      <View style={s.rowDivider} />
+                      <TextInput
+                        placeholder="Meaning"
+                        placeholderTextColor={COLORS.warmgray}
+                        value={line.meaning}
+                        onChangeText={(val) => {
+                          const newArr = [...calendarDrafts];
+                          newArr[index].meaning = val;
+                          setCalendarDrafts(newArr);
+                        }}
+                        style={s.meaningInput}
+                      />
+                    </View>
+                    <TouchableOpacity style={s.wordRowIcon} onPress={() => {
+                      const updated = [...calendarDrafts];
+                      updated.splice(index, 1);
+                      setCalendarDrafts(updated.length > 0 ? updated : [{ word: '', meaning: '' }]);
+                    }}>
+                      <Trash2 size={20} color="#E74C3C" />
+                    </TouchableOpacity>
+                  </View>
+                
+              ))}
+
+              <TouchableOpacity onPress={() => setCalendarDrafts([...calendarDrafts, { word: '', meaning: '' }])} style={s.addLineBtn}>
+                <Plus size={24} color={COLORS.white} />
+              </TouchableOpacity>
+              <View style={{ height: 100 }} />
+            </ScrollView>
+          </SafeAreaView>
         </Modal>
 
         {/* ========== YEAR PICKER MODAL ========== */}
@@ -431,27 +534,35 @@ export default function CalendarScreen() {
                 <View style={s.emptyState}><Text style={s.emptyText}>No matching words found in library.</Text></View>
               ) : (
                 searchResults.map((item, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    onPress={() => handleSearchResultClick(item)}
-                    style={s.searchResultRow}
-                    activeOpacity={0.7}
-                  >
-                    <View style={{ flex: 1 }}>
-                      <Text style={s.searchWord}>{item.word}</Text>
-                      <Text style={s.searchMeaning}>{item.meaning}</Text>
-                    </View>
-                    {item.dateAdded && (
-                      <Text style={s.searchDate}>
-                        {formatLocalDateString(item.dateAdded)}
-                      </Text>
-                    )}
-                    {item.isDraft && (
-                      <View style={{ backgroundColor: COLORS.lightgray, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2, marginLeft: 8 }}>
-                        <Text style={{ fontFamily: 'Inter_500Medium', fontSize: 10, color: COLORS.warmgray }}>Draft</Text>
+                    <TouchableOpacity
+                      key={`search-${index}`}
+                      onPress={() => {
+                        const d = new Date(item.dateAdded || item.createdAt || new Date());
+                        setSelectedDate(d);
+                        setCurrentMonth(d.getMonth());
+                        setCurrentYear(d.getFullYear());
+                        setIsSearchActive(false);
+                        setSearchQuery('');
+                      }}
+                      style={s.searchResultRow}
+                      activeOpacity={0.7}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={s.searchWord}>{item.word}</Text>
+                        <Text style={s.searchMeaning}>{item.meaning}</Text>
                       </View>
-                    )}
-                  </TouchableOpacity>
+                      {item.dateAdded && (
+                        <Text style={s.searchDate}>
+                          {formatLocalDateString(item.dateAdded)}
+                        </Text>
+                      )}
+                      {item.isDraft && (
+                        <View style={{ backgroundColor: COLORS.lightgray, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2, marginLeft: 8 }}>
+                          <Text style={{ fontFamily: 'Inter_500Medium', fontSize: 10, color: COLORS.warmgray }}>Draft</Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  
                 ))
               )}
             </ScrollView>
@@ -503,7 +614,7 @@ const getStyles = (COLORS: any) => StyleSheet.create({
     marginTop: 2, backgroundColor: COLORS.lightgray,
     borderRadius: 4, paddingHorizontal: 4, paddingVertical: 1, minWidth: 16, alignItems: 'center',
   },
-  countBadgeSelected: { backgroundColor: 'rgba(255,255,255,0.2)' },
+  countBadgeSelected: { backgroundColor: 'transparent', borderWidth: 1, borderColor: COLORS.bg },
   countText: { fontFamily: 'Inter_500Medium', fontSize: 9, color: COLORS.warmgray },
   countTextSelected: { color: COLORS.bg },
 
@@ -570,4 +681,40 @@ const getStyles = (COLORS: any) => StyleSheet.create({
   searchWord: { fontFamily: 'Outfit_700Bold', fontSize: 15, color: COLORS.charcoal, textTransform: 'capitalize' },
   searchMeaning: { fontFamily: 'Inter_400Regular', fontSize: 13, color: COLORS.warmgray, marginTop: 2 },
   searchDate: { fontFamily: 'Inter_400Regular', fontSize: 12, color: COLORS.warmgray, marginLeft: 12 },
+
+  // Expanded Card UI
+  datePill: {
+    backgroundColor: COLORS.bg,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 24,
+    borderTopWidth: 2,
+    borderLeftWidth: 2,
+    borderTopColor: COLORS.bone,
+    borderLeftColor: COLORS.bone,
+    borderBottomWidth: 1,
+    borderRightWidth: 1,
+    borderBottomColor: COLORS.card,
+    borderRightColor: COLORS.card,
+  },
+  datePillText: {
+    fontFamily: 'Outfit_600SemiBold',
+    fontSize: 16,
+    color: COLORS.charcoal,
+    letterSpacing: 1,
+  },
+  savePill: { backgroundColor: COLORS.charcoal, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
+  savePillText: { fontFamily: 'Inter_500Medium', fontSize: 13, color: COLORS.bg },
+  wordRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: COLORS.bone, gap: 8 },
+  wordRowNum: { fontFamily: 'Inter_500Medium', fontSize: 14, color: COLORS.warmgray, width: 24 },
+  wordRowContent: { flex: 1, flexDirection: 'row', alignItems: 'center' },
+  wordInput: { flex: 1, fontFamily: 'Outfit_700Bold', fontSize: 16, color: COLORS.charcoal, padding: 0 },
+  wordInputSaved: { flex: 1, fontFamily: 'Outfit_700Bold', fontSize: 16, color: COLORS.charcoal },
+  rowDivider: { width: 1, height: 20, backgroundColor: COLORS.bone, marginHorizontal: 12 },
+  meaningInput: { flex: 1.5, fontFamily: 'Inter_400Regular', fontSize: 14, color: COLORS.warmgray, padding: 0 },
+  meaningInputSaved: { flex: 1.5, fontFamily: 'Inter_400Regular', fontSize: 14, color: COLORS.charcoal },
+  wordRowIcon: { padding: 8 },
+  addLineBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.charcoal, justifyContent: 'center', alignItems: 'center', alignSelf: 'center', marginVertical: 32 },
 });
+

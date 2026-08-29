@@ -161,31 +161,35 @@ export default function ProfileScreen() {
     <SafeAreaView style={[s.container, { backgroundColor: COLORS.bg }]} edges={['top']}>
       <View style={s.content}>
         {/* Header */}
-        <View style={s.header}>
-          <Text style={[s.headerTitle, { color: COLORS.charcoal }]}>Profile</Text>
-          <TouchableOpacity onPress={openSettings} style={s.iconBtn}>
-            <Settings size={24} color={COLORS.charcoal} strokeWidth={2.5} />
-          </TouchableOpacity>
-        </View>
+        
+          <View style={s.header}>
+            <Text style={[s.headerTitle, { color: COLORS.charcoal }]}>Profile</Text>
+            <TouchableOpacity onPress={openSettings} style={s.iconBtn}>
+              <Settings size={24} color={COLORS.charcoal} strokeWidth={2.5} />
+            </TouchableOpacity>
+          </View>
+        
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1, paddingBottom: insets.bottom + 90 }}>
           {/* User Info Card */}
-          <View style={[s.userInfoCard, { backgroundColor: COLORS.white, borderColor: COLORS.bone }]}>
-            <View style={[s.avatarSmall, { backgroundColor: COLORS.charcoal }]}>
-              <Text style={[s.avatarTextSmall, { color: COLORS.bg }]}>{initial}</Text>
-            </View>
-            <View style={s.userInfoTextWrap}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={[s.userNameText, { color: COLORS.charcoal }]}>{displayName}</Text>
-                {!isAuthenticated && (
-                  <TouchableOpacity onPress={() => { setEditNameValue(displayName); setIsEditingName(true); }} style={{ paddingHorizontal: 8 }}>
-                    <Text style={{ fontFamily: 'Inter_600SemiBold', fontSize: 14, color: COLORS.warmgray }}>Edit</Text>
-                  </TouchableOpacity>
-                )}
+          
+            <View style={[s.userInfoCard, { backgroundColor: COLORS.white, borderColor: COLORS.bone }]}>
+              <View style={[s.avatarSmall, { backgroundColor: COLORS.charcoal }]}>
+                <Text style={[s.avatarTextSmall, { color: COLORS.bg }]}>{initial}</Text>
               </View>
-              <Text style={[s.userEmailText, { color: COLORS.warmgray }]}>{displayEmail}</Text>
+              <View style={s.userInfoTextWrap}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={[s.userNameText, { color: COLORS.charcoal }]}>{displayName}</Text>
+                  {!isAuthenticated && (
+                    <TouchableOpacity onPress={() => { setEditNameValue(displayName); setIsEditingName(true); }} style={{ paddingHorizontal: 8 }}>
+                      <Text style={{ fontFamily: 'Inter_600SemiBold', fontSize: 14, color: COLORS.warmgray }}>Edit</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+                <Text style={[s.userEmailText, { color: COLORS.warmgray }]}>{displayEmail}</Text>
+              </View>
             </View>
-          </View>
+          
 
           {/* Edit Name Modal */}
           <Modal visible={isEditingName} transparent animationType="fade">
@@ -213,59 +217,63 @@ export default function ProfileScreen() {
           </Modal>
 
           {/* Reviews Completed Card */}
-          <View style={[s.reviewCard, { backgroundColor: COLORS.white, borderColor: COLORS.bone }]}>
-            <View style={s.reviewCardLeft}>
-              <Text style={[s.reviewCardLabel, { color: COLORS.warmgray }]}>Reviews Completed</Text>
-              <Text style={[s.reviewCardValue, { color: COLORS.charcoal }]}>{totalReviews.toLocaleString()}</Text>
+          
+            <View style={[s.reviewCard, { backgroundColor: COLORS.white, borderColor: COLORS.bone }]}>
+              <View style={s.reviewCardLeft}>
+                <Text style={[s.reviewCardLabel, { color: COLORS.warmgray }]}>Reviews Completed</Text>
+                <Text style={[s.reviewCardValue, { color: COLORS.charcoal }]}>{totalReviews.toLocaleString()}</Text>
+              </View>
+              <View style={[s.trophyWrap, { backgroundColor: COLORS.lightgray }]}>
+                <Trophy size={24} color={COLORS.charcoal} strokeWidth={2} />
+              </View>
             </View>
-            <View style={[s.trophyWrap, { backgroundColor: COLORS.lightgray }]}>
-              <Trophy size={24} color={COLORS.charcoal} strokeWidth={2} />
-            </View>
-          </View>
+          
 
           <View style={{ flex: 1 }} />
 
           {/* Sync & Auth Buttons */}
-          <View style={{ gap: 12, marginTop: 24 }}>
-            {!isAuthenticated ? (
-              <>
-                <Text style={[s.syncHint, { color: COLORS.warmgray }]}>
-                  The app works fully offline. Create an account to sync your vocabulary across devices.
-                </Text>
-                <TouchableOpacity
-                  onPress={() => router.push('/(auth)/login')}
-                  style={[s.logoutBtn, { backgroundColor: COLORS.charcoal, borderColor: COLORS.charcoal, marginTop: 0 }]}
-                >
-                  <Cloud size={20} color={COLORS.bg} strokeWidth={2.5} />
-                  <Text style={[s.logoutText, { color: COLORS.bg }]}>Create account for sync</Text>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <>
-                <Text style={[s.syncHint, { color: COLORS.warmgray }]}>
-                  Synced as {user?.email}
-                  {lastSynced ? `\nLast synced: ${lastSynced}` : '\nNot synced yet'}
-                </Text>
-                {syncMessage ? (
-                  <Text style={[s.syncHint, { color: COLORS.charcoal }]}>{syncMessage}</Text>
-                ) : null}
-                <TouchableOpacity
-                  onPress={handleSyncNow}
-                  disabled={isSyncing}
-                  style={[s.logoutBtn, { backgroundColor: COLORS.charcoal, borderColor: COLORS.charcoal, marginTop: 0, opacity: isSyncing ? 0.7 : 1 }]}
-                >
-                  <RefreshCw size={20} color={COLORS.bg} strokeWidth={2.5} />
-                  <Text style={[s.logoutText, { color: COLORS.bg }]}>
-                    {isSyncing ? 'Syncing…' : 'Sync now'}
+          
+            <View style={{ gap: 12, marginTop: 24 }}>
+              {!isAuthenticated ? (
+                <>
+                  <Text style={[s.syncHint, { color: COLORS.warmgray }]}>
+                    The app works fully offline. Create an account to sync your vocabulary across devices.
                   </Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={handleLogout} style={[s.logoutBtn, { backgroundColor: COLORS.card, borderColor: COLORS.bone, marginTop: 0 }]}>
-                  <LogOut size={20} color={COLORS.charcoal} strokeWidth={2.5} />
-                  <Text style={[s.logoutText, { color: COLORS.charcoal }]}>Logout</Text>
-                </TouchableOpacity>
-              </>
-            )}
-          </View>
+                  <TouchableOpacity
+                    onPress={() => router.push('/(auth)/login')}
+                    style={[s.logoutBtn, { backgroundColor: COLORS.charcoal, borderColor: COLORS.charcoal, marginTop: 0 }]}
+                  >
+                    <Cloud size={20} color={COLORS.bg} strokeWidth={2.5} />
+                    <Text style={[s.logoutText, { color: COLORS.bg }]}>Create account for sync</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <>
+                  <Text style={[s.syncHint, { color: COLORS.warmgray }]}>
+                    Synced as {user?.email}
+                    {lastSynced ? `\nLast synced: ${lastSynced}` : '\nNot synced yet'}
+                  </Text>
+                  {syncMessage ? (
+                    <Text style={[s.syncHint, { color: COLORS.charcoal }]}>{syncMessage}</Text>
+                  ) : null}
+                  <TouchableOpacity
+                    onPress={handleSyncNow}
+                    disabled={isSyncing}
+                    style={[s.logoutBtn, { backgroundColor: COLORS.charcoal, borderColor: COLORS.charcoal, marginTop: 0, opacity: isSyncing ? 0.7 : 1 }]}
+                  >
+                    <RefreshCw size={20} color={COLORS.bg} strokeWidth={2.5} />
+                    <Text style={[s.logoutText, { color: COLORS.bg }]}>
+                      {isSyncing ? 'Syncing…' : 'Sync now'}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={handleLogout} style={[s.logoutBtn, { backgroundColor: COLORS.card, borderColor: COLORS.bone, marginTop: 0 }]}>
+                    <LogOut size={20} color={COLORS.charcoal} strokeWidth={2.5} />
+                    <Text style={[s.logoutText, { color: COLORS.charcoal }]}>Logout</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
+          
         </ScrollView>
 
         {/* ========== SETTINGS MODAL ========== */}
