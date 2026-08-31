@@ -31,5 +31,6 @@ COPY --from=builder /app/src ./src
 ENV PORT 8080
 EXPOSE 8080
 
-# Use a shell script or chain commands to run migrations before starting
-CMD npx prisma migrate deploy && npm start
+COPY start.sh ./
+RUN chmod +x start.sh
+CMD ["./start.sh"]
