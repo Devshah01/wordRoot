@@ -140,6 +140,7 @@ export default function DashboardScreen() {
   };
 
   const panGesture = Gesture.Pan()
+    .activeOffsetX([-20, 20])
     .onEnd((e) => {
       if (e.translationX < -40) {
         runOnJS(handleSwipeLeft)();
@@ -676,8 +677,8 @@ const getStyles = (COLORS: any) => StyleSheet.create({
   vocabCard: {
     backgroundColor: COLORS.white,
     borderRadius: 30,
-    padding: 12,
-    marginBottom: 16,
+    padding: 10,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: COLORS.bone,
     // Add subtle depth
@@ -691,7 +692,7 @@ const getStyles = (COLORS: any) => StyleSheet.create({
     backgroundColor: COLORS.bg,
     alignSelf: 'flex-start',
     paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingVertical: 8,
     borderRadius: 24,
     borderTopWidth: 2.5,
     borderLeftWidth: 2.5,
@@ -701,7 +702,7 @@ const getStyles = (COLORS: any) => StyleSheet.create({
     borderRightWidth: 1,
     borderBottomColor: COLORS.white,
     borderRightColor: COLORS.white,
-    marginBottom: 12,
+    marginBottom: 10,
   },
   expandedDatePill: {
     marginBottom: 0,
@@ -719,7 +720,7 @@ const getStyles = (COLORS: any) => StyleSheet.create({
     color: COLORS.charcoal,
     letterSpacing: 1,
   },
-  vocabSlotList: { gap: 6 },
+  vocabSlotList: { gap: 4 },
   vocabSlot: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   vocabSlotNum: { fontFamily: 'Inter_500Medium', fontSize: 15, color: COLORS.warmgray, width: 22 },
   collapsedTextContainer: { flex: 1, paddingBottom: 2 },
@@ -747,7 +748,9 @@ const getStyles = (COLORS: any) => StyleSheet.create({
     width: '100%',
     backgroundColor: COLORS.white,
     borderRadius: 18,
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 24,
+    paddingBottom: 16,
     borderWidth: 1,
     borderColor: COLORS.bone,
     shadowColor: '#000',

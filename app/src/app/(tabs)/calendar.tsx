@@ -396,7 +396,7 @@ export default function CalendarScreen() {
           {/* Word List Box - Perfectly sized above bottom navigation bar with scrollable items inside */}
           
             <View style={{ flex: 1 }}>
-              <View style={[s.vocabCard, { marginBottom: insets.bottom + 110 }]}>
+              <View style={[s.vocabCard, { marginBottom: insets.bottom + 92 }]}>
                 {selectedDateWords.length === 0 ? (
                   <View style={s.emptyVocabContent}>
                     <BookOpen size={40} color={COLORS.bone} strokeWidth={1.5} style={{ marginBottom: 12 }} />
