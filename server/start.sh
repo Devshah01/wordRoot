@@ -4,7 +4,7 @@
 # Free tier databases (like Neon, Layerbase, Supabase) go to sleep when idle.
 # This script retries the Prisma migration command to give the database time to wake up.
 
-MAX_RETRIES=6
+MAX_RETRIES=12
 RETRY_COUNT=0
 SLEEP_TIME=5
 
