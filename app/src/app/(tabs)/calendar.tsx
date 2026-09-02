@@ -239,6 +239,7 @@ export default function CalendarScreen() {
   };
 
   const dayPanGesture = Gesture.Pan()
+    .activeOffsetX([-20, 20])
     .onEnd((e) => {
       if (e.translationX < -40) {
         runOnJS(handleSwipeLeft)();
@@ -248,6 +249,7 @@ export default function CalendarScreen() {
     });
 
   const monthPanGesture = Gesture.Pan()
+    .activeOffsetX([-20, 20])
     .onEnd((e) => {
       if (e.translationX < -40) {
         runOnJS(nextMonth)();
