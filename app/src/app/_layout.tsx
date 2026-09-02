@@ -43,6 +43,7 @@ if (Platform.OS === 'web' && typeof window !== 'undefined') {
 LogBox.ignoreLogs([
   'SafeAreaView has been deprecated',
   'CssInterop upgrade warning',
+  '[Worklets] Tried to modify key `handlerTag` of an object',
 ]);
 
 SplashScreen.preventAutoHideAsync();
