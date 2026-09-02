@@ -37,6 +37,11 @@ export default function ReviewScreen() {
   const [selectedGroup, setSelectedGroup] = useState<PendingReviewGroup | null>(null);
   const [isSessionActive, setIsSessionActive] = useState(false);
 
+  const getIsMeaningToWord = useCallback((word: Word): boolean => {
+    // Alternating: reviewCount 0, 2, 4 -> Word to Meaning; 1, 3, 5 -> Meaning to Word
+    return ((word.reviewCount || 0) % 2) === 1;
+  }, []);
+
   // Active review session state
   const [sessionWords, setSessionWords] = useState<Word[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -387,6 +392,7 @@ export default function ReviewScreen() {
             {sessionWords.slice(currentIndex, currentIndex + 3).reverse().map((card, idx, arr) => {
               const isTop = idx === arr.length - 1;
               const stackIndex = arr.length - 1 - idx;
+              const isMeaningToWord = getIsMeaningToWord(card);
 
               if (isTop) {
                 return (
@@ -398,14 +404,32 @@ export default function ReviewScreen() {
                   >
                     {/* FRONT */}
                     <Animated.View style={[s.cardFace, s.cardFront, frontAnimatedStyle]}>
-                      <Text style={s.cardWord}>{card.word}</Text>
-                      <Text style={s.cardHint}>Tap to reveal meaning</Text>
+                      {isMeaningToWord ? (
+                        <>
+                          <Text style={s.cardPromptMeaning}>{card.meaning}</Text>
+                          <Text style={s.cardHint}>Tap to reveal word</Text>
+                        </>
+                      ) : (
+                        <>
+                          <Text style={s.cardWord}>{card.word}</Text>
+                          <Text style={s.cardHint}>Tap to reveal meaning</Text>
+                        </>
+                      )}
                     </Animated.View>
 
                     {/* BACK */}
                     <Animated.View style={[s.cardFace, s.cardBack, backAnimatedStyle]}>
-                      <Text style={s.cardMeaning}>{card.meaning}</Text>
-                      <Text style={[s.cardHint, { marginTop: 8 }]}>{card.word}</Text>
+                      {isMeaningToWord ? (
+                        <>
+                          <Text style={s.cardWord}>{card.word}</Text>
+                          <Text style={[s.cardHint, { marginTop: 8 }]}>{card.meaning}</Text>
+                        </>
+                      ) : (
+                        <>
+                          <Text style={s.cardMeaning}>{card.meaning}</Text>
+                          <Text style={[s.cardHint, { marginTop: 8 }]}>{card.word}</Text>
+                        </>
+                      )}
                     </Animated.View>
                   </AnimatedPressable>
                 );
@@ -431,7 +455,12 @@ export default function ReviewScreen() {
                     },
                   ]}
                 >
-                  <Text style={s.cardWord}>{card.word}</Text>
+                  <Text
+                    style={isMeaningToWord ? s.cardPromptMeaningStack : s.cardWord}
+                    numberOfLines={isMeaningToWord ? 3 : 1}
+                  >
+                    {isMeaningToWord ? card.meaning : card.word}
+                  </Text>
                 </View>
               );
             })}
@@ -805,16 +834,35 @@ const getStyles = (COLORS: any) =>
     },
     cardMeaning: {
       fontFamily: 'Outfit_700Bold',
-      fontSize: 26,
+      fontSize: 24,
       color: COLORS.charcoal,
       textAlign: 'center',
+      lineHeight: 32,
+    },
+    cardPromptMeaning: {
+      fontFamily: 'Outfit_600SemiBold',
+      fontSize: 21,
+      lineHeight: 30,
+      color: COLORS.charcoal,
+      textAlign: 'center',
+      paddingHorizontal: 8,
+    },
+    cardPromptMeaningStack: {
+      fontFamily: 'Outfit_600SemiBold',
+      fontSize: 15,
+      lineHeight: 20,
+      color: COLORS.charcoal,
+      textAlign: 'center',
+      paddingHorizontal: 12,
+      opacity: 0.7,
     },
     cardHint: {
       fontFamily: 'Inter_400Regular',
       fontSize: 12,
       color: COLORS.warmgray,
-      marginTop: 32,
+      marginTop: 24,
       opacity: 0.6,
+      textAlign: 'center',
     },
 
     // Complete screen
