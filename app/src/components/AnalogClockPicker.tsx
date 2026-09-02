@@ -2,7 +2,8 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable react-hooks/set-state-in-effect */
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import AnimatedPressable from './AnimatedPressable';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
@@ -233,32 +234,32 @@ export default function AnalogClockPicker({
       </GestureDetector>
 
       <View style={styles.timeDisplayContainer}>
-        <TouchableOpacity onPress={() => handleSetMode('hour')} style={[styles.timeSegment, mode === 'hour' && { backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: 8 }]}>
+        <AnimatedPressable onPress={() => handleSetMode('hour')} style={[styles.timeSegment, mode === 'hour' && { backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: 8 }]}>
           <Text style={[styles.timeText, { color: mode === 'hour' ? COLORS.charcoal : COLORS.warmgray }]}>
             {displayHour.toString().padStart(2, '0')}
           </Text>
-        </TouchableOpacity>
+        </AnimatedPressable>
         <Text style={[styles.timeText, { color: COLORS.charcoal, marginHorizontal: 4 }]}>:</Text>
-        <TouchableOpacity onPress={() => handleSetMode('minute')} style={[styles.timeSegment, mode === 'minute' && { backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: 8 }]}>
+        <AnimatedPressable onPress={() => handleSetMode('minute')} style={[styles.timeSegment, mode === 'minute' && { backgroundColor: 'rgba(0,0,0,0.05)', borderRadius: 8 }]}>
           <Text style={[styles.timeText, { color: mode === 'minute' ? COLORS.charcoal : COLORS.warmgray }]}>
             {displayMinute.toString().padStart(2, '0')}
           </Text>
-        </TouchableOpacity>
+        </AnimatedPressable>
       </View>
 
       <View style={styles.ampmContainer}>
-        <TouchableOpacity
+        <AnimatedPressable
           style={[styles.toggleBtn, !isPM ? [styles.toggleActive, { backgroundColor: COLORS.charcoal }] : { backgroundColor: COLORS.card }]}
           onPress={() => handleToggleAMPM(false)}
         >
           <Text style={[styles.toggleText, !isPM ? [styles.toggleTextActive, { color: COLORS.bg }] : { color: COLORS.warmgray }]}>AM</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
+        </AnimatedPressable>
+        <AnimatedPressable
           style={[styles.toggleBtn, isPM ? [styles.toggleActive, { backgroundColor: COLORS.charcoal }] : { backgroundColor: COLORS.card }]}
           onPress={() => handleToggleAMPM(true)}
         >
           <Text style={[styles.toggleText, isPM ? [styles.toggleTextActive, { color: COLORS.bg }] : { color: COLORS.warmgray }]}>PM</Text>
-        </TouchableOpacity>
+        </AnimatedPressable>
       </View>
     </View>
   );

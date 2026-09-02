@@ -47,7 +47,8 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#FBFBFA"
+          "backgroundColor": "#FBFBFA",
+          "image": "./assets/images/icon.png"
         }
       ],
       "expo-web-browser",

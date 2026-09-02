@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -9,34 +9,126 @@ import Animated, {
   withDelay,
 } from 'react-native-reanimated';
 import Svg, { Polygon, G } from 'react-native-svg';
+
+import { Asset } from 'expo-asset';
+import {
+  createAudioPlayer,
+  setAudioModeAsync,
+  setIsAudioActiveAsync,
+  type AudioPlayer,
+} from 'expo-audio';
+
 import { APP_COLORS } from '../constants/theme';
 import { useAppStore } from '../store/useAppStore';
 
+const SPIN_SOUND = require('../../assets/sounds/spin.mp3');
+
+const waitForPlayerReady = async (player: AudioPlayer, timeoutMs = 4000) => {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (player.isLoaded) return true;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  return player.isLoaded;
+};
+
+const releasePlayer = (player: AudioPlayer | null) => {
+  if (!player) return;
+  try { player.pause(); } catch {}
+  try { player.release(); } catch {}
+};
+
 const AnimatedSvg = Animated.createAnimatedComponent(Svg);
+
+const SPLASH_DURATION_MS = 4200;
+
+
 
 export default function AnimatedSplashScreen({ onAnimationFinish }: { onAnimationFinish: () => void }) {
   const isDarkMode = useAppStore((s) => s.isDarkMode);
   const COLORS = isDarkMode ? APP_COLORS.dark : APP_COLORS.light;
 
-  const rotation = useSharedValue(720); // Start at 720 degrees
-  const textProgress = useSharedValue(0); // 0 to 9 for letter cascade
+  const rotation = useSharedValue(720);
+  const textProgress = useSharedValue(0);
+
+  const audioStopped = useRef(false);
+  const spinPlayerRef = useRef<AudioPlayer | null>(null);
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const stopSplashAudio = () => {
+    if (audioStopped.current) return;
+    audioStopped.current = true;
+
+    timersRef.current.forEach(clearTimeout);
+    timersRef.current = [];
+
+    releasePlayer(spinPlayerRef.current);
+    spinPlayerRef.current = null;
+  };
+
+
 
   useEffect(() => {
-    // 1. Logo rotates fast to slow
-    rotation.value = withTiming(0, {
-      duration: 1800,
-      easing: Easing.bezier(0.1, 1, 0.2, 1),
-    });
+    let cancelled = false;
 
-    // 2. Letters appear sequentially
-    textProgress.value = withDelay(500, withTiming(9, { duration: 900, easing: Easing.linear }));
+    const startSplashAudio = async () => {
+      try {
+        await setIsAudioActiveAsync(true);
+        await setAudioModeAsync({
+          playsInSilentMode: true,
+          interruptionMode: 'mixWithOthers',
+          shouldPlayInBackground: false,
+        });
 
-    // 3. Finish
-    const timer = setTimeout(() => {
-      onAnimationFinish();
-    }, 2200);
+        const spinAsset = await Asset.fromModule(SPIN_SOUND).downloadAsync();
 
-    return () => clearTimeout(timer);
+        if (cancelled || audioStopped.current) return;
+
+        const spinPlayer = createAudioPlayer({ uri: spinAsset.localUri ?? spinAsset.uri });
+        
+        spinPlayerRef.current = spinPlayer;
+        spinPlayer.volume = 1;
+
+        await waitForPlayerReady(spinPlayer);
+        
+        if (cancelled || audioStopped.current) return;
+
+        await spinPlayer.seekTo(0);
+        spinPlayer.play();
+
+        const spinStopTimer = setTimeout(() => {
+          if (cancelled || audioStopped.current) return;
+          try { spinPlayer.pause(); } catch {}
+        }, 1000);
+        timersRef.current.push(spinStopTimer);
+
+        // ---- Start Visuals In Sync With Audio ----
+        rotation.value = withTiming(0, {
+          duration: 1000,
+          easing: Easing.bezier(0.1, 1, 0.2, 1),
+        });
+
+        textProgress.value = withDelay(1000, withTiming(8, { duration: 1500, easing: Easing.linear }));
+
+        const finishTimer = setTimeout(() => {
+          if (cancelled) return;
+          stopSplashAudio();
+          onAnimationFinish();
+        }, SPLASH_DURATION_MS);
+        timersRef.current.push(finishTimer);
+
+      } catch (error) {
+        console.warn('[splash] audio setup failed', error);
+        if (!cancelled) onAnimationFinish();
+      }
+    };
+
+    startSplashAudio();
+
+    return () => {
+      cancelled = true;
+      stopSplashAudio();
+    };
   }, [onAnimationFinish]);
 
   const logoAnimatedStyle = useAnimatedStyle(() => {
@@ -83,9 +175,7 @@ export default function AnimatedSplashScreen({ onAnimationFinish }: { onAnimatio
 
 function AnimatedLetter({ char, index, textProgress, color }: { char: string, index: number, textProgress: any, color: string }) {
   const charStyle = useAnimatedStyle(() => {
-    // opacity interpolates from 0 to 1 as textProgress passes index
     const opacity = Math.max(0, Math.min(1, textProgress.value - index));
-    // slide up slightly as it fades in
     const translateY = 15 * (1 - opacity);
     return {
       opacity,
@@ -116,7 +206,7 @@ const styles = StyleSheet.create({
   },
   brandText: {
     fontFamily: 'Geist_700Bold',
-    fontSize: 56, // Large text
+    fontSize: 56,
     letterSpacing: -4,
   },
 });

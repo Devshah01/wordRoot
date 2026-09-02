@@ -64,11 +64,11 @@ export function useLocalNotifications() {
     responseListener.current = Notifications.addNotificationResponseReceivedListener(() => {});
 
     return () => {
-      if (notificationListener.current) {
-        Notifications.removeNotificationSubscription(notificationListener.current);
+      if (notificationListener.current?.remove) {
+        notificationListener.current.remove();
       }
-      if (responseListener.current) {
-        Notifications.removeNotificationSubscription(responseListener.current);
+      if (responseListener.current?.remove) {
+        responseListener.current.remove();
       }
     };
   }, []);

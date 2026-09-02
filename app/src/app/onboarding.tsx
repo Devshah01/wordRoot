@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import AnimatedPressable from '../components/AnimatedPressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useAppStore } from '../store/useAppStore';
@@ -40,12 +41,12 @@ export default function OnboardingScreen() {
             onSubmitEditing={handleContinue}
           />
           
-          <TouchableOpacity 
+          <AnimatedPressable 
             style={[s.button, { opacity: name.trim().length > 0 ? 1 : 0.7 }]} 
             onPress={handleContinue}
           >
             <Text style={s.buttonText}>Continue</Text>
-          </TouchableOpacity>
+          </AnimatedPressable>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

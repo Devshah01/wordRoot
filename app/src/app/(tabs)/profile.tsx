@@ -3,13 +3,13 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   Modal,
   ScrollView,
   StyleSheet,
   Dimensions,
   TextInput,
 } from 'react-native';
+import AnimatedPressable from '../../components/AnimatedPressable';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, runOnJS } from 'react-native-reanimated';
@@ -162,31 +162,35 @@ export default function ProfileScreen() {
       <View style={s.content}>
         {/* Header */}
         
-          <View style={s.header}>
-            <Text style={[s.headerTitle, { color: COLORS.charcoal }]}>Profile</Text>
-            <TouchableOpacity onPress={openSettings} style={s.iconBtn}>
-              <Settings size={24} color={COLORS.charcoal} strokeWidth={2.5} />
-            </TouchableOpacity>
+          <View>
+            <View style={s.header}>
+              <Text style={[s.headerTitle, { color: COLORS.charcoal }]}>Profile</Text>
+              <AnimatedPressable onPress={openSettings} style={s.iconBtn}>
+                <Settings size={24} color={COLORS.charcoal} strokeWidth={2.5} />
+              </AnimatedPressable>
+            </View>
           </View>
         
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1, paddingBottom: insets.bottom + 90 }}>
           {/* User Info Card */}
           
-            <View style={[s.userInfoCard, { backgroundColor: COLORS.white, borderColor: COLORS.bone }]}>
-              <View style={[s.avatarSmall, { backgroundColor: COLORS.charcoal }]}>
-                <Text style={[s.avatarTextSmall, { color: COLORS.bg }]}>{initial}</Text>
-              </View>
-              <View style={s.userInfoTextWrap}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Text style={[s.userNameText, { color: COLORS.charcoal }]}>{displayName}</Text>
-                  {!isAuthenticated && (
-                    <TouchableOpacity onPress={() => { setEditNameValue(displayName); setIsEditingName(true); }} style={{ paddingHorizontal: 8 }}>
-                      <Text style={{ fontFamily: 'Inter_600SemiBold', fontSize: 14, color: COLORS.warmgray }}>Edit</Text>
-                    </TouchableOpacity>
-                  )}
+            <View>
+              <View style={[s.userInfoCard, { backgroundColor: COLORS.white, borderColor: COLORS.bone }]}>
+                <View style={[s.avatarSmall, { backgroundColor: COLORS.charcoal }]}>
+                  <Text style={[s.avatarTextSmall, { color: COLORS.bg }]}>{initial}</Text>
                 </View>
-                <Text style={[s.userEmailText, { color: COLORS.warmgray }]}>{displayEmail}</Text>
+                <View style={s.userInfoTextWrap}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={[s.userNameText, { color: COLORS.charcoal }]}>{displayName}</Text>
+                    {!isAuthenticated && (
+                      <AnimatedPressable onPress={() => { setEditNameValue(displayName); setIsEditingName(true); }} style={{ paddingHorizontal: 8 }}>
+                        <Text style={{ fontFamily: 'Inter_600SemiBold', fontSize: 14, color: COLORS.warmgray }}>Edit</Text>
+                      </AnimatedPressable>
+                    )}
+                  </View>
+                  <Text style={[s.userEmailText, { color: COLORS.warmgray }]}>{displayEmail}</Text>
+                </View>
               </View>
             </View>
           
@@ -205,12 +209,12 @@ export default function ProfileScreen() {
                   autoFocus
                 />
                 <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 24, gap: 16 }}>
-                  <TouchableOpacity onPress={() => setIsEditingName(false)}>
+                  <AnimatedPressable onPress={() => setIsEditingName(false)}>
                     <Text style={[s.editNameBtn, { color: COLORS.warmgray }]}>Cancel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={handleSaveName}>
+                  </AnimatedPressable>
+                  <AnimatedPressable onPress={handleSaveName}>
                     <Text style={[s.editNameBtn, { color: COLORS.charcoal }]}>Save</Text>
-                  </TouchableOpacity>
+                  </AnimatedPressable>
                 </View>
               </View>
             </View>
@@ -218,13 +222,15 @@ export default function ProfileScreen() {
 
           {/* Reviews Completed Card */}
           
-            <View style={[s.reviewCard, { backgroundColor: COLORS.white, borderColor: COLORS.bone }]}>
-              <View style={s.reviewCardLeft}>
-                <Text style={[s.reviewCardLabel, { color: COLORS.warmgray }]}>Reviews Completed</Text>
-                <Text style={[s.reviewCardValue, { color: COLORS.charcoal }]}>{totalReviews.toLocaleString()}</Text>
-              </View>
-              <View style={[s.trophyWrap, { backgroundColor: COLORS.lightgray }]}>
-                <Trophy size={24} color={COLORS.charcoal} strokeWidth={2} />
+            <View>
+              <View style={[s.reviewCard, { backgroundColor: COLORS.white, borderColor: COLORS.bone }]}>
+                <View style={s.reviewCardLeft}>
+                  <Text style={[s.reviewCardLabel, { color: COLORS.warmgray }]}>Reviews Completed</Text>
+                  <Text style={[s.reviewCardValue, { color: COLORS.charcoal }]}>{totalReviews.toLocaleString()}</Text>
+                </View>
+                <View style={[s.trophyWrap, { backgroundColor: COLORS.lightgray }]}>
+                  <Trophy size={24} color={COLORS.charcoal} strokeWidth={2} />
+                </View>
               </View>
             </View>
           
@@ -233,19 +239,20 @@ export default function ProfileScreen() {
 
           {/* Sync & Auth Buttons */}
           
-            <View style={{ gap: 12, marginTop: 24 }}>
-              {!isAuthenticated ? (
+            <View>
+              <View style={{ gap: 12, marginTop: 24 }}>
+                {!isAuthenticated ? (
                 <>
                   <Text style={[s.syncHint, { color: COLORS.warmgray }]}>
                     The app works fully offline. Create an account to sync your vocabulary across devices.
                   </Text>
-                  <TouchableOpacity
+                  <AnimatedPressable
                     onPress={() => router.push('/(auth)/login')}
                     style={[s.logoutBtn, { backgroundColor: COLORS.charcoal, borderColor: COLORS.charcoal, marginTop: 0 }]}
                   >
                     <Cloud size={20} color={COLORS.bg} strokeWidth={2.5} />
                     <Text style={[s.logoutText, { color: COLORS.bg }]}>Create account for sync</Text>
-                  </TouchableOpacity>
+                  </AnimatedPressable>
                 </>
               ) : (
                 <>
@@ -256,7 +263,7 @@ export default function ProfileScreen() {
                   {syncMessage ? (
                     <Text style={[s.syncHint, { color: COLORS.charcoal }]}>{syncMessage}</Text>
                   ) : null}
-                  <TouchableOpacity
+                  <AnimatedPressable
                     onPress={handleSyncNow}
                     disabled={isSyncing}
                     style={[s.logoutBtn, { backgroundColor: COLORS.charcoal, borderColor: COLORS.charcoal, marginTop: 0, opacity: isSyncing ? 0.7 : 1 }]}
@@ -265,14 +272,15 @@ export default function ProfileScreen() {
                     <Text style={[s.logoutText, { color: COLORS.bg }]}>
                       {isSyncing ? 'Syncing…' : 'Sync now'}
                     </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={handleLogout} style={[s.logoutBtn, { backgroundColor: COLORS.card, borderColor: COLORS.bone, marginTop: 0 }]}>
+                  </AnimatedPressable>
+                  <AnimatedPressable onPress={handleLogout} style={[s.logoutBtn, { backgroundColor: COLORS.card, borderColor: COLORS.bone, marginTop: 0 }]}>
                     <LogOut size={20} color={COLORS.charcoal} strokeWidth={2.5} />
                     <Text style={[s.logoutText, { color: COLORS.charcoal }]}>Logout</Text>
-                  </TouchableOpacity>
+                  </AnimatedPressable>
                 </>
               )}
             </View>
+          </View>
           
         </ScrollView>
 
@@ -284,9 +292,9 @@ export default function ProfileScreen() {
                 <View style={[s.modalHeader, { borderBottomColor: COLORS.bone }]}>
                   <View style={{ width: 24 }} />
                   <Text style={[s.modalTitle, { color: COLORS.charcoal }]}>Settings</Text>
-                  <TouchableOpacity onPress={closeSettings}>
+                  <AnimatedPressable onPress={closeSettings}>
                     <X size={24} color={COLORS.charcoal} />
-                  </TouchableOpacity>
+                  </AnimatedPressable>
                 </View>
 
                 <ScrollView style={{ flex: 1, paddingHorizontal: 24 }} showsVerticalScrollIndicator={false}>
@@ -296,18 +304,18 @@ export default function ProfileScreen() {
                     <Text style={[s.settingLabel, { color: COLORS.charcoal }]}>Theme</Text>
                     <Text style={[s.settingSub, { color: COLORS.warmgray }]}>Choose your preferred theme</Text>
                     <View style={s.themeRow}>
-                      <TouchableOpacity
+                      <AnimatedPressable
                         onPress={() => setIsDarkMode(false)}
                         style={[s.themeBtn, { borderColor: COLORS.bone }, !isDarkMode && { borderColor: COLORS.charcoal, backgroundColor: COLORS.charcoal }]}
                       >
                         <Text style={[s.themeBtnText, { color: COLORS.charcoal }, !isDarkMode && { color: COLORS.bg }]}>Light</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
+                      </AnimatedPressable>
+                      <AnimatedPressable
                         onPress={() => setIsDarkMode(true)}
                         style={[s.themeBtn, { borderColor: COLORS.bone }, isDarkMode && { borderColor: COLORS.charcoal, backgroundColor: COLORS.charcoal }]}
                       >
                         <Text style={[s.themeBtnText, { color: COLORS.charcoal }, isDarkMode && { color: COLORS.bg }]}>Dark</Text>
-                      </TouchableOpacity>
+                      </AnimatedPressable>
                     </View>
                   </View>
 
@@ -321,13 +329,13 @@ export default function ProfileScreen() {
                       </View>
                     </View>
 
-                    <TouchableOpacity onPress={openTimePicker} style={[s.timePickerBtn, { backgroundColor: COLORS.card, borderColor: COLORS.bone }]}>
+                    <AnimatedPressable onPress={openTimePicker} style={[s.timePickerBtn, { backgroundColor: COLORS.card, borderColor: COLORS.bone }]}>
                       <Clock size={18} color={COLORS.charcoal} />
                       <Text style={[s.timePickerBtnText, { color: COLORS.charcoal }]}>
                         {formatTimeForDisplay(user?.notificationTime || guestNotificationTime)}
                       </Text>
                       <ChevronRight size={18} color={COLORS.warmgray} style={{ marginLeft: 'auto' }} />
-                    </TouchableOpacity>
+                    </AnimatedPressable>
                   </View>
                   <View style={{ height: 32 }} />
                 </ScrollView>
@@ -348,13 +356,13 @@ export default function ProfileScreen() {
                     isDarkMode={isDarkMode}
                   />
                   <View style={s.clockModalActions}>
-                    <TouchableOpacity style={s.clockCancelBtn} onPress={() => setShowTimePicker(false)}>
+                    <AnimatedPressable style={s.clockCancelBtn} onPress={() => setShowTimePicker(false)}>
                       <Text style={[s.clockBtnText, { color: COLORS.warmgray }]}>Cancel</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[s.clockConfirmBtn, { backgroundColor: COLORS.charcoal }]} onPress={confirmTimeSelection}>
+                    </AnimatedPressable>
+                    <AnimatedPressable style={[s.clockConfirmBtn, { backgroundColor: COLORS.charcoal }]} onPress={confirmTimeSelection}>
                       <Check size={18} color={COLORS.bg} style={{ marginRight: 6 }} />
                       <Text style={[s.clockBtnText, { color: COLORS.bg }]}>Save Time</Text>
-                    </TouchableOpacity>
+                    </AnimatedPressable>
                   </View>
                 </View>
               </View>
@@ -374,9 +382,9 @@ export default function ProfileScreen() {
               <View style={[s.logoutDialogCard, { backgroundColor: COLORS.white, borderColor: COLORS.bone }]}>
                 <View style={s.logoutDialogHeader}>
                   <Text style={[s.logoutDialogTitle, { color: COLORS.charcoal }]}>Log Out</Text>
-                  <TouchableOpacity disabled={isLoggingOut} onPress={() => setIsLogoutModalVisible(false)} style={s.logoutCloseBtn}>
+                  <AnimatedPressable disabled={isLoggingOut} onPress={() => setIsLogoutModalVisible(false)} style={s.logoutCloseBtn}>
                     <X size={20} color={COLORS.warmgray} />
-                  </TouchableOpacity>
+                  </AnimatedPressable>
                 </View>
 
                 <Text style={[s.logoutDialogSubtitle, { color: COLORS.warmgray }]}>
@@ -384,7 +392,7 @@ export default function ProfileScreen() {
                 </Text>
 
                 {/* Option 1: Keep Words on Device */}
-                <TouchableOpacity
+                <AnimatedPressable
                   disabled={isLoggingOut}
                   onPress={() => executeLogout(false)}
                   style={[s.logoutOptionCard, { backgroundColor: COLORS.card, borderColor: COLORS.bone }]}
@@ -399,10 +407,10 @@ export default function ProfileScreen() {
                       Log out and continue studying your words offline in guest mode.
                     </Text>
                   </View>
-                </TouchableOpacity>
+                </AnimatedPressable>
 
                 {/* Option 2: Clear Words from Device */}
-                <TouchableOpacity
+                <AnimatedPressable
                   disabled={isLoggingOut}
                   onPress={() => executeLogout(true)}
                   style={[s.logoutOptionCard, { backgroundColor: isDarkMode ? '#2B1515' : '#FEF2F2', borderColor: isDarkMode ? '#5C1D1D' : '#FECACA' }]}
@@ -417,15 +425,15 @@ export default function ProfileScreen() {
                       Wipe local storage on this phone. Recommended for shared or public devices.
                     </Text>
                   </View>
-                </TouchableOpacity>
+                </AnimatedPressable>
 
-                <TouchableOpacity
+                <AnimatedPressable
                   disabled={isLoggingOut}
                   onPress={() => setIsLogoutModalVisible(false)}
                   style={[s.cancelBtn, { borderColor: COLORS.bone, backgroundColor: COLORS.bg }]}
                 >
                   <Text style={[s.cancelBtnText, { color: COLORS.charcoal }]}>Cancel</Text>
-                </TouchableOpacity>
+                </AnimatedPressable>
               </View>
             </View>
           </Modal>

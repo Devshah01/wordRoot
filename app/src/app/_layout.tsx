@@ -1,6 +1,6 @@
 import { Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { LogBox, Platform } from 'react-native';
+import { LogBox, Platform, View, StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { 
   useFonts, 
@@ -89,15 +89,17 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#FBFBFA' }}>
-      {!isSplashAnimationComplete ? (
-        <AnimatedSplashScreen onAnimationFinish={() => setSplashAnimationComplete(true)} />
-      ) : (
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="index" />
-          <Stack.Screen name="onboarding" />
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="(auth)/login" options={{ presentation: 'modal' }} />
-        </Stack>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="onboarding" />
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="(auth)/login" options={{ presentation: 'modal' }} />
+      </Stack>
+
+      {!isSplashAnimationComplete && (
+        <View style={[StyleSheet.absoluteFill, { zIndex: 9999 }]}>
+          <AnimatedSplashScreen onAnimationFinish={() => setSplashAnimationComplete(true)} />
+        </View>
       )}
     </GestureHandlerRootView>
   );

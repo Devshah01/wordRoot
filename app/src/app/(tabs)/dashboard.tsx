@@ -5,13 +5,15 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   TextInput,
   ScrollView,
   Modal,
   StyleSheet,
   Dimensions,
+  TouchableOpacity,
 } from 'react-native';
+import { GestureDetector, Gesture } from 'react-native-gesture-handler';
+import AnimatedPressable from '../../components/AnimatedPressable';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, runOnJS } from 'react-native-reanimated';
 import { router, useFocusEffect } from 'expo-router';
@@ -31,7 +33,6 @@ const SCREEN_WIDTH = Dimensions.get('window').width;
 
 const ENCOURAGING_QUOTES = [
   "Level up your vocab! 🚀",
-  "Unleash your vocabulary! 🚀",
   "Expand your mind! 💡",
   "Master your words! ⚔️",
   "Fuel your language! 🔥",
@@ -80,6 +81,7 @@ export default function DashboardScreen() {
   const [pendingReviews, setPendingReviews] = useState<any[]>([]);
   const [isVocabCardExpanded, setIsVocabCardExpanded] = useState(false);
   const [editedSavedWords, setEditedSavedWords] = useState<any[]>([]);
+  const [currentDashboardDate, setCurrentDashboardDate] = useState<Date>(new Date());
 
   const [stats, setStats] = useState({
     totalWords: 0,
@@ -96,8 +98,8 @@ export default function DashboardScreen() {
     return ENCOURAGING_QUOTES[Math.floor(Math.random() * ENCOURAGING_QUOTES.length)];
   });
 
-  const getFormattedDate = () => {
-    const today = new Date();
+  const getFormattedDate = (dateToFormat = currentDashboardDate) => {
+    const today = dateToFormat;
     const day = today.getDate().toString().padStart(2, '0');
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const month = months[today.getMonth()];
@@ -121,16 +123,41 @@ export default function DashboardScreen() {
     }, [fetchDashboardData, setIsTabBarHidden])
   );
 
+  const handleSwipeLeft = () => {
+    setCurrentDashboardDate(prev => {
+      const next = new Date(prev);
+      next.setDate(next.getDate() + 1);
+      return next;
+    });
+  };
+
+  const handleSwipeRight = () => {
+    setCurrentDashboardDate(prev => {
+      const prevDate = new Date(prev);
+      prevDate.setDate(prevDate.getDate() - 1);
+      return prevDate;
+    });
+  };
+
+  const panGesture = Gesture.Pan()
+    .onEnd((e) => {
+      if (e.translationX < -40) {
+        runOnJS(handleSwipeLeft)();
+      } else if (e.translationX > 40) {
+        runOnJS(handleSwipeRight)();
+      }
+    });
+
   useEffect(() => {
     if (!searchQuery) { setSearchResults([]); return; }
     const query = searchQuery.toLowerCase();
-    
+
     const draftWords = vocabLines
       .filter(l => l.word.trim() && l.meaning.trim())
       .map(l => ({ ...l, dateAdded: new Date().toISOString() }));
-      
+
     const searchPool = [...words, ...draftWords];
-    
+
     const matches = searchPool.filter(
       (w) => w.word.toLowerCase().includes(query) || (w.meaning && w.meaning.toLowerCase().includes(query))
     );
@@ -155,13 +182,13 @@ export default function DashboardScreen() {
 
   const handleSaveVocab = async () => {
     const validEntries = vocabLines.filter((line) => line.word.trim() && line.meaning.trim());
-    
+
     // Find modified saved words
     const todayStr = formatLocalDateString(new Date());
     const originalTodayWords = words
       .filter(w => w.dateAdded && formatLocalDateString(w.dateAdded) === todayStr)
       .sort((a, b) => new Date(a.dateAdded).getTime() - new Date(b.dateAdded).getTime());
-      
+
     const modifiedWords = editedSavedWords.filter((editedWord, i) => {
       const original = originalTodayWords.find(w => w.id === editedWord.id);
       return original && (original.word !== editedWord.word.trim().toLowerCase() || original.meaning !== editedWord.meaning.trim());
@@ -173,20 +200,35 @@ export default function DashboardScreen() {
       return;
     }
 
+    const wordExists = [...validEntries, ...modifiedWords].some(entry => words.some(w => w.word.toLowerCase() === entry.word.toLowerCase() && !editedSavedWords.find(ew => ew.id === w.id)));
+
+    if (wordExists) {
+      alert('This word is already in your vocabulary.');
+      return;
+    }
+
+    // Only allow saving drafts if we are on today's date in dashboard
+    const isToday = formatLocalDateString(currentDashboardDate) === formatLocalDateString(new Date());
+    let wordDate = new Date().toISOString();
+
+    if (!isToday) {
+      const d = currentDashboardDate;
+      wordDate = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0).toISOString();
+    }
+
     try {
-      const now = new Date().toISOString();
       const newWords = validEntries.map((entry) => ({
         id: Crypto.randomUUID(),
         word: entry.word.trim().toLowerCase(),
         meaning: entry.meaning.trim(),
-        dateAdded: now,
+        dateAdded: wordDate,
         fsrsStability: 1.0,
         fsrsDifficulty: 5.0,
         fsrsLapses: 0,
         fsrsReps: 0,
         fsrsState: 'New',
         lastReview: null,
-        nextReview: now,
+        nextReview: wordDate,
         reviewCount: 0,
       }));
 
@@ -205,7 +247,7 @@ export default function DashboardScreen() {
           ...word
         });
       }
-      
+
       for (const word of finalModifiedWords) {
         await queueCloudChange(word.id, 'update', {
           word: word.word,
@@ -240,11 +282,11 @@ export default function DashboardScreen() {
     setIsVocabCardExpanded(nextState);
     setIsTabBarHidden(nextState);
     if (nextState) {
-      const todayStr = formatLocalDateString(new Date());
-      const todayWords = words
-        .filter(w => w.dateAdded && formatLocalDateString(w.dateAdded) === todayStr)
+      const targetStr = formatLocalDateString(currentDashboardDate);
+      const targetWords = words
+        .filter(w => w.dateAdded && formatLocalDateString(w.dateAdded) === targetStr)
         .sort((a, b) => new Date(a.dateAdded).getTime() - new Date(b.dateAdded).getTime());
-      setEditedSavedWords(JSON.parse(JSON.stringify(todayWords)));
+      setEditedSavedWords(JSON.parse(JSON.stringify(targetWords)));
     } else {
       setEditedSavedWords([]);
     }
@@ -264,144 +306,70 @@ export default function DashboardScreen() {
 
   const displayName = user ? user.username : (guestName || 'Explorer');
 
-  const draftCount = vocabLines.filter(line => line.word.trim().length > 0 && line.meaning.trim().length > 0).length;
-  const displayWordsAddedToday = stats.wordsAddedToday + draftCount;
-  const displayTotalWords = stats.totalWords + draftCount;
+  const isToday = formatLocalDateString(currentDashboardDate) === formatLocalDateString(new Date());
+  const draftCount = isToday ? vocabLines.filter(line => line.word.trim().length > 0 && line.meaning.trim().length > 0).length : 0;
+
+  const currentStr = formatLocalDateString(currentDashboardDate);
+  const wordsForDate = words.filter(w => w.dateAdded && formatLocalDateString(w.dateAdded) === currentStr).length;
+
+  const displayWordsAddedToday = wordsForDate + draftCount;
+  const displayTotalWords = stats.totalWords + (isToday ? vocabLines.filter(line => line.word.trim().length > 0 && line.meaning.trim().length > 0).length : 0);
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
-      <View style={[s.content, isVocabCardExpanded && { paddingHorizontal: 12 }]}>
+      <View style={s.content}>
         {/* Header */}
-        {!isVocabCardExpanded && (
-          
-            <View style={s.header}>
-              <Text style={s.greetingLabel}>{randomQuote}</Text>
-              <View style={s.headerRow2}>
-                <Text style={s.displayNameText}>{displayName} 👋</Text>
-                <View style={s.headerIcons}>
-                  <TouchableOpacity onPress={() => setIsSearchActive(true)} style={s.iconBtn}>
-                    <Search size={24} color={COLORS.charcoal} strokeWidth={2.5} />
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={openBell} style={s.iconBtn}>
-                    <Bell size={24} color={COLORS.charcoal} strokeWidth={2.5} />
-                    {pendingReviews.length > 0 && <View style={s.badge} />}
-                  </TouchableOpacity>
-                </View>
+        <View style={s.header}>
+          <View>
+            <Text style={s.greetingLabel}>{randomQuote}</Text>
+          </View>
+          <View>
+            <View style={s.headerRow2}>
+              <Text style={s.displayNameText}>{displayName} 👋</Text>
+              <View style={s.headerIcons}>
+                <AnimatedPressable onPress={() => setIsSearchActive(true)} style={s.iconBtn}>
+                  <Search size={24} color={COLORS.charcoal} strokeWidth={2.5} />
+                </AnimatedPressable>
+                <AnimatedPressable onPress={openBell} style={s.iconBtn}>
+                  <Bell size={24} color={COLORS.charcoal} strokeWidth={2.5} />
+                  {pendingReviews.length > 0 && <View style={s.badge} />}
+                </AnimatedPressable>
               </View>
             </View>
-          
-        )}
+          </View>
+        </View>
 
-        <View style={{ flex: 1, paddingBottom: isVocabCardExpanded ? insets.bottom + 48 : insets.bottom + 100 }}>
+        <View style={{ flex: 1, paddingBottom: insets.bottom + 92 }}>
           {/* Today's Vocabulary Card */}
-          
-            <TouchableOpacity
-              onPress={isVocabCardExpanded ? undefined : handleToggleExpand}
-              style={s.vocabCard}
-              activeOpacity={isVocabCardExpanded ? 1 : 0.9}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 24 }}>
-                {isVocabCardExpanded && (
-                  <TouchableOpacity onPress={handleToggleExpand} style={{ marginRight: 16 }}>
-                    <ArrowLeft size={28} color={COLORS.charcoal} />
-                  </TouchableOpacity>
-                )}
-                <View style={[s.datePill, { marginBottom: 0 }]}>
-                  <Text style={s.datePillText}>{getFormattedDate()}</Text>
-                </View>
-                <View style={{ flex: 1 }} />
-                {isVocabCardExpanded && (
-                  <TouchableOpacity onPress={handleSaveVocab} style={s.savePill}>
-                    <Text style={s.savePillText}>Save</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
+          <View>
+            <Text style={s.sectionLabel}>
+              {formatLocalDateString(currentDashboardDate) === formatLocalDateString(new Date())
+                ? "Today's Vocabulary"
+                : "Vocabulary"}
+            </Text>
 
-              {isVocabCardExpanded ? (
-                // EXPANDED STATE
-                <View style={{ flex: 1 }}>
-                  <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-                    {(() => {
-                      return (
-                        <>
-                          {/* Show today's saved words first */}
-                          {editedSavedWords.map((word, index) => (
-                              <View key={`saved-${index}`} style={s.wordRow}>
-                                <Text style={s.wordRowNum}>{index + 1}.</Text>
-                                <View style={s.wordRowContent}>
-                                  <TextInput
-                                    style={s.wordInputSaved}
-                                    value={word.word}
-                                    onChangeText={(val) => {
-                                      const newArr = [...editedSavedWords];
-                                      newArr[index].word = val;
-                                      setEditedSavedWords(newArr);
-                                    }}
-                                    autoCapitalize="none"
-                                  />
-                                  <View style={s.rowDivider} />
-                                  <TextInput
-                                    style={s.meaningInputSaved}
-                                    value={word.meaning}
-                                    onChangeText={(val) => {
-                                      const newArr = [...editedSavedWords];
-                                      newArr[index].meaning = val;
-                                      setEditedSavedWords(newArr);
-                                    }}
-                                  />
-                                </View>
-                                <TouchableOpacity style={s.wordRowIcon} onPress={() => handleDeleteSavedWord(word)}>
-                                  <Trash2 size={20} color="#E74C3C" />
-                                </TouchableOpacity>
-                              </View>
-                          ))}
-                          
-                          {/* Now the input lines for NEW words */}
-                          {vocabLines.map((line, index) => (
-                              <View key={`line-${index}`} style={s.wordRow}>
-                                <Text style={s.wordRowNum}>{editedSavedWords.length + index + 1}.</Text>
-                                <View style={s.wordRowContent}>
-                                  <TextInput
-                                    placeholder="Word"
-                                    placeholderTextColor={COLORS.warmgray}
-                                    value={line.word}
-                                    onChangeText={(val) => updateVocabLine(index, 'word', val)}
-                                    style={s.wordInput}
-                                    autoCapitalize="none"
-                                  />
-                                  <View style={s.rowDivider} />
-                                  <TextInput
-                                    placeholder="Meaning"
-                                    placeholderTextColor={COLORS.warmgray}
-                                    value={line.meaning}
-                                    onChangeText={(val) => updateVocabLine(index, 'meaning', val)}
-                                    style={s.meaningInput}
-                                  />
-                                </View>
-                                <TouchableOpacity style={s.wordRowIcon} onPress={() => removeVocabLine(index)}>
-                                  <Trash2 size={20} color="#E74C3C" />
-                                </TouchableOpacity>
-                              </View>
-                          ))}
-                        </>
-                      );
-                    })()}
-                    <TouchableOpacity onPress={addVocabLine} style={[s.addLineBtn, { alignSelf: 'center', marginTop: 32 }]}>
-                      <Plus size={24} color={COLORS.white} />
-                    </TouchableOpacity>
-                    <View style={{ height: 100 }} />
-                  </ScrollView>
+            <GestureDetector gesture={panGesture}>
+              <TouchableOpacity
+                onPress={handleToggleExpand}
+                style={s.vocabCard}
+                activeOpacity={0.9}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 24 }}>
+                  <View style={[s.datePill, { marginBottom: 0 }]}>
+                    <Text style={s.datePillText}>{getFormattedDate()}</Text>
+                  </View>
                 </View>
-              ) : (
-                // COLLAPSED STATE
-                <View style={{ flex: 1 }}>
+
+                {/* COLLAPSED STATE */}
+                <View>
                   <View style={s.vocabSlotList}>
                     {[1, 2, 3, 4, 5].map((num) => {
                       // Merge draft vocab lines into display for guest mode
-                      const draftWords = vocabLines
+                      const isToday = formatLocalDateString(currentDashboardDate) === formatLocalDateString(new Date());
+                      const draftWords = isToday ? vocabLines
                         .filter(l => l.word.trim() && l.meaning.trim())
-                        .map(l => ({ ...l, dateAdded: new Date().toISOString() }));
-                      const todayStr = formatLocalDateString(new Date());
+                        .map(l => ({ ...l, dateAdded: new Date().toISOString() })) : [];
+                      const todayStr = formatLocalDateString(currentDashboardDate);
                       const todayLibraryWords = [...words]
                         .filter(w => w.dateAdded && formatLocalDateString(w.dateAdded) === todayStr)
                         .sort((a, b) => new Date(a.dateAdded).getTime() - new Date(b.dateAdded).getTime());
@@ -442,19 +410,20 @@ export default function DashboardScreen() {
                     </View>
                   </View>
                 </View>
-              )}
-            </TouchableOpacity>
-          
+              </TouchableOpacity>
+            </GestureDetector>
+          </View>
 
           {/* Stats Column */}
-          {!isVocabCardExpanded && (
-            
-              <View style={s.statsColumn}>
-              <View style={s.statCardLarge}>
+          <View style={[s.statsColumn, { flex: 1 }]}>
+            <View style={{ flex: 1 }}>
+              <View style={[s.statCardLarge, { flex: 1, justifyContent: 'center', gap: 12 }]}>
                 <View style={s.statCardHeader}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <View style={s.statDot} />
-                    <Text style={s.statLabelSmall}>Today's Words</Text>
+                    <Text style={s.statLabelSmall}>
+                      {isToday ? "Today's Words" : "Words Added"}
+                    </Text>
                   </View>
                   <BookPlus size={20} color={COLORS.warmgray} strokeWidth={2} />
                 </View>
@@ -463,8 +432,10 @@ export default function DashboardScreen() {
                   <Text style={s.statSuffix}>Added</Text>
                 </View>
               </View>
+            </View>
 
-              <View style={s.statCardLarge}>
+            <View style={{ flex: 1 }}>
+              <View style={[s.statCardLarge, { flex: 1, justifyContent: 'center', gap: 12 }]}>
                 <View style={s.statCardHeader}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <View style={[s.statDot, { backgroundColor: COLORS.warmgray }]} />
@@ -477,34 +448,119 @@ export default function DashboardScreen() {
                   <Text style={s.statSuffix}>Total Words</Text>
                 </View>
               </View>
-              </View>
-            
-          )}
+            </View>
+          </View>
         </View>
 
 
+        {/* ========== EXPANDED VOCAB MODAL ========== */}
+        <Modal visible={isVocabCardExpanded} animationType="fade" transparent={false}>
+          <SafeAreaView style={[s.container, { paddingHorizontal: 12 }]}>
+            <GestureDetector gesture={panGesture}>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 24, marginTop: 12 }}>
+                  <AnimatedPressable onPress={handleToggleExpand} style={{ marginRight: 16 }}>
+                    <ArrowLeft size={28} color={COLORS.charcoal} />
+                  </AnimatedPressable>
+                  <View style={[s.datePill, s.expandedDatePill]}>
+                    <Text style={s.datePillText}>{getFormattedDate()}</Text>
+                  </View>
+                  <View style={{ flex: 1 }} />
+                  <AnimatedPressable onPress={handleSaveVocab} style={s.savePill}>
+                    <Text style={s.savePillText}>Save</Text>
+                  </AnimatedPressable>
+                </View>
+
+                <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+                  {editedSavedWords.map((word, index) => (
+                    <View key={`saved-${index}`} style={s.wordRow}>
+                      <Text style={s.wordRowNum}>{index + 1}.</Text>
+                      <View style={s.wordRowContent}>
+                        <TextInput
+                          style={s.wordInputSaved}
+                          value={word.word}
+                          onChangeText={(val) => {
+                            const newArr = [...editedSavedWords];
+                            newArr[index].word = val;
+                            setEditedSavedWords(newArr);
+                          }}
+                          autoCapitalize="none"
+                        />
+                        <View style={s.rowDivider} />
+                        <TextInput
+                          style={s.meaningInputSaved}
+                          value={word.meaning}
+                          onChangeText={(val) => {
+                            const newArr = [...editedSavedWords];
+                            newArr[index].meaning = val;
+                            setEditedSavedWords(newArr);
+                          }}
+                        />
+                      </View>
+                      <AnimatedPressable style={s.wordRowIcon} onPress={() => handleDeleteSavedWord(word)}>
+                        <Trash2 size={20} color="#E74C3C" />
+                      </AnimatedPressable>
+                    </View>
+                  ))}
+
+                  {vocabLines.map((line, index) => (
+                    <View key={`line-${index}`} style={s.wordRow}>
+                      <Text style={s.wordRowNum}>{editedSavedWords.length + index + 1}.</Text>
+                      <View style={s.wordRowContent}>
+                        <TextInput
+                          placeholder="Word"
+                          placeholderTextColor={COLORS.warmgray}
+                          value={line.word}
+                          onChangeText={(val) => updateVocabLine(index, 'word', val)}
+                          style={s.wordInput}
+                          autoCapitalize="none"
+                        />
+                        <View style={s.rowDivider} />
+                        <TextInput
+                          placeholder="Meaning"
+                          placeholderTextColor={COLORS.warmgray}
+                          value={line.meaning}
+                          onChangeText={(val) => updateVocabLine(index, 'meaning', val)}
+                          style={s.meaningInput}
+                        />
+                      </View>
+                      <AnimatedPressable style={s.wordRowIcon} onPress={() => removeVocabLine(index)}>
+                        <Trash2 size={20} color="#E74C3C" />
+                      </AnimatedPressable>
+                    </View>
+                  ))}
+                  <AnimatedPressable onPress={addVocabLine} style={[s.addLineBtn, { alignSelf: 'center', marginTop: 32 }]}>
+                    <Plus size={24} color={COLORS.white} />
+                  </AnimatedPressable>
+                  <View style={{ height: 100 }} />
+                </ScrollView>
+              </View>
+            </GestureDetector>
+          </SafeAreaView>
+        </Modal>
+
         {/* ========== BELL MODAL ========== */}
         <Modal visible={isBellOpen} animationType="none" transparent onRequestClose={closeBell}>
-          <TouchableOpacity activeOpacity={1} onPress={closeBell} style={s.modalOverlay} />
+          <AnimatedPressable activeOpacity={1} onPress={closeBell} style={s.modalOverlay} />
           <Animated.View style={[s.bellDrawer, animatedBellStyle]}>
-          <SafeAreaView style={s.container}>
-                <View style={[s.modalHeader, { borderBottomColor: COLORS.bone }]}>
-                  <View style={{ width: 24 }} />
-                  <Text style={[s.modalTitle, { color: COLORS.charcoal }]}>Notifications</Text>
-                  <TouchableOpacity onPress={closeBell}>
-                    <X size={24} color={COLORS.charcoal} />
-                  </TouchableOpacity>
-                </View>
-            <ScrollView style={{ flex: 1, paddingHorizontal: 24 }}>
-              <Text style={s.sectionLabel}>Pending Reviews</Text>
-              {pendingReviews.length === 0 ? (
-                <View style={[s.statCardLarge, { alignItems: 'center', justifyContent: 'center', paddingVertical: 48, minHeight: 220, marginTop: 12 }]}>
-                  <CheckCircle2 size={48} color={COLORS.warmgray} strokeWidth={1.5} style={{ marginBottom: 16 }} />
-                  <Text style={[s.emptyText, { fontFamily: 'Outfit_700Bold', fontSize: 18, color: COLORS.charcoal }]}>All Caught Up!</Text>
-                  <Text style={[s.emptyText, { marginTop: 8 }]}>No pending reviews at the moment.</Text>
-                </View>
-              ) : (
-                pendingReviews.map((group, index) => (
+            <SafeAreaView style={s.container}>
+              <View style={[s.modalHeader, { borderBottomColor: COLORS.bone }]}>
+                <View style={{ width: 24 }} />
+                <Text style={[s.modalTitle, { color: COLORS.charcoal }]}>Notifications</Text>
+                <AnimatedPressable onPress={closeBell}>
+                  <X size={24} color={COLORS.charcoal} />
+                </AnimatedPressable>
+              </View>
+              <ScrollView style={{ flex: 1, paddingHorizontal: 24 }}>
+                <Text style={[s.sectionLabel, { marginTop: 14 }]}>Pending Reviews</Text>
+                {pendingReviews.length === 0 ? (
+                  <View style={[s.statCardLarge, { alignItems: 'center', justifyContent: 'center', paddingVertical: 48, minHeight: 220, marginTop: 12 }]}>
+                    <CheckCircle2 size={48} color={COLORS.warmgray} strokeWidth={1.5} style={{ marginBottom: 16 }} />
+                    <Text style={[s.emptyText, { fontFamily: 'Outfit_700Bold', fontSize: 18, color: COLORS.charcoal }]}>All Caught Up!</Text>
+                    <Text style={[s.emptyText, { marginTop: 8 }]}>No pending reviews at the moment.</Text>
+                  </View>
+                ) : (
+                  pendingReviews.map((group, index) => (
                     <View key={index} style={s.reviewRow}>
                       <View style={s.reviewRowLeft}>
                         <View style={s.calIcon}>
@@ -517,15 +573,15 @@ export default function DashboardScreen() {
                           <Text style={s.reviewCount}>{group.count} Words</Text>
                         </View>
                       </View>
-                      <TouchableOpacity onPress={() => handleStartReviewFromBell(group.date)} style={s.reviewBtn}>
+                      <AnimatedPressable onPress={() => handleStartReviewFromBell(group.date)} style={s.reviewBtn}>
                         <Text style={s.reviewBtnText}>Review</Text>
-                      </TouchableOpacity>
+                      </AnimatedPressable>
                     </View>
-                  
-                ))
-              )}
-            </ScrollView>
-          </SafeAreaView>
+
+                  ))
+                )}
+              </ScrollView>
+            </SafeAreaView>
           </Animated.View>
         </Modal>
 
@@ -533,9 +589,9 @@ export default function DashboardScreen() {
         <Modal visible={isSearchActive} animationType="fade">
           <SafeAreaView style={s.container}>
             <View style={s.searchHeader}>
-              <TouchableOpacity onPress={() => { setIsSearchActive(false); setSearchQuery(''); }}>
+              <AnimatedPressable onPress={() => { setIsSearchActive(false); setSearchQuery(''); }}>
                 <ArrowLeft size={24} color={COLORS.charcoal} />
-              </TouchableOpacity>
+              </AnimatedPressable>
               <TextInput
                 placeholder="Search word or meaning..."
                 placeholderTextColor={COLORS.warmgray}
@@ -545,24 +601,24 @@ export default function DashboardScreen() {
                 autoFocus
               />
               {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <AnimatedPressable onPress={() => setSearchQuery('')}>
                   <X size={20} color={COLORS.warmgray} />
-                </TouchableOpacity>
+                </AnimatedPressable>
               )}
             </View>
             <ScrollView style={{ flex: 1, paddingHorizontal: 24, paddingTop: 16 }}>
-              {searchQuery && searchResults.length === 0 ? (
+              {searchQuery.length > 0 && searchResults.length === 0 ? (
                 <View style={s.emptyState}><Text style={s.emptyText}>No matching words found.</Text></View>
               ) : (
                 searchResults.map((item, index) => (
-                    <TouchableOpacity key={`search-${index}`} onPress={() => handleSearchResultClick(item)} style={s.searchResultRow}>
-                      <View>
-                        <Text style={s.searchWord}>{item.word}</Text>
-                        <Text style={s.searchMeaning}>{item.meaning}</Text>
-                      </View>
-                      <Text style={s.searchDate}>{formatLocalDateString(item.dateAdded || item.createdAt || new Date())}</Text>
-                    </TouchableOpacity>
-                  
+                  <AnimatedPressable key={`search-${index}`} onPress={() => handleSearchResultClick(item)} style={s.searchResultRow}>
+                    <View>
+                      <Text style={s.searchWord}>{item.word}</Text>
+                      <Text style={s.searchMeaning}>{item.meaning}</Text>
+                    </View>
+                    <Text style={s.searchDate}>{formatLocalDateString(item.dateAdded || item.createdAt || new Date())}</Text>
+                  </AnimatedPressable>
+
                 ))
               )}
             </ScrollView>
@@ -580,7 +636,7 @@ const getStyles = (COLORS: any) => StyleSheet.create({
   // Header — two-line layout
   header: {
     flexDirection: 'column',
-    marginBottom: 16,
+    marginBottom: 8,
   },
   greetingLabel: {
     fontFamily: 'Outfit_700Bold',
@@ -618,14 +674,12 @@ const getStyles = (COLORS: any) => StyleSheet.create({
 
   // Vocab Card — tall, occupies most of screen
   vocabCard: {
-    flex: 1, // Stretch to fill available space
     backgroundColor: COLORS.white,
     borderRadius: 30,
-    padding: 16,
-    marginBottom: 12,
+    padding: 12,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: COLORS.bone,
-    minHeight: 250,
     // Add subtle depth
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -639,16 +693,25 @@ const getStyles = (COLORS: any) => StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 24,
-    borderTopWidth: 1,
-    borderLeftWidth: 1,
+    borderTopWidth: 2.5,
+    borderLeftWidth: 2.5,
     borderTopColor: COLORS.bone,
     borderLeftColor: COLORS.bone,
     borderBottomWidth: 1,
-    // borderRightWidth: 1,
-    borderBottomColor: COLORS.card,
-    // borderRightColor: COLORS.card,
-    marginBottom: 24,
-    boxShadow: 'inset 2px 2px 5px rgba(0, 0, 0, 0.06)',
+    borderRightWidth: 1,
+    borderBottomColor: COLORS.white,
+    borderRightColor: COLORS.white,
+    marginBottom: 12,
+  },
+  expandedDatePill: {
+    marginBottom: 0,
+    borderWidth: 1,
+    borderColor: COLORS.bone,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
   },
   datePillText: {
     fontFamily: 'Outfit_600SemiBold',
@@ -656,36 +719,35 @@ const getStyles = (COLORS: any) => StyleSheet.create({
     color: COLORS.charcoal,
     letterSpacing: 1,
   },
-  vocabSlotList: { gap: 14, flex: 1 },
+  vocabSlotList: { gap: 6 },
   vocabSlot: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   vocabSlotNum: { fontFamily: 'Inter_500Medium', fontSize: 15, color: COLORS.warmgray, width: 22 },
   collapsedTextContainer: { flex: 1, paddingBottom: 2 },
   collapsedWordText: { fontFamily: 'Outfit_700Bold', fontSize: 16, color: COLORS.charcoal },
   collapsedMeaningText: { fontFamily: 'Inter_400Regular', fontSize: 14, color: COLORS.warmgray },
   vocabSlotLine: { flex: 1, height: 1, backgroundColor: COLORS.bone },
-  vocabAddRow: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 12 },
+  vocabAddRow: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 16 },
   addCircle: {
     width: 48, height: 48, borderRadius: 24,
     backgroundColor: COLORS.bg,
     justifyContent: 'center', alignItems: 'center',
-    borderTopWidth: 1,
-    borderLeftWidth: 1,
+    borderTopWidth: 2.5,
+    borderLeftWidth: 2.5,
     borderTopColor: COLORS.bone,
     borderLeftColor: COLORS.bone,
     borderBottomWidth: 1,
-    // borderRightWidth: 1,
-    borderBottomColor: COLORS.card,
-    // borderRightColor: COLORS.card,
-    boxShadow: 'inset 2px 2px 5px rgba(0, 0, 0, 0.06)',
+    borderRightWidth: 1,
+    borderBottomColor: COLORS.white,
+    borderRightColor: COLORS.white,
   },
 
   // Stats Column — Stacked vertically
-  statsColumn: { flexDirection: 'column', gap: 12, marginBottom: 0 },
+  statsColumn: { flexDirection: 'column', gap: 16, marginBottom: 0 },
   statCardLarge: {
     width: '100%',
     backgroundColor: COLORS.white,
     borderRadius: 18,
-    padding: 12,
+    padding: 16,
     borderWidth: 1,
     borderColor: COLORS.bone,
     shadowColor: '#000',
@@ -705,7 +767,7 @@ const getStyles = (COLORS: any) => StyleSheet.create({
     backgroundColor: COLORS.charcoal,
   },
   statLabelSmall: { fontFamily: 'Inter_500Medium', fontSize: 13, color: COLORS.warmgray },
-  statBottom: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
+  statBottom: { flexDirection: 'row', alignItems: 'baseline', gap: 6, transform: [{ translateY: -8 }] },
   statValueSmall: { fontFamily: 'Outfit_700Bold', fontSize: 22, color: COLORS.charcoal },
   statSuffix: { fontFamily: 'Inter_500Medium', fontSize: 14, color: COLORS.warmgray },
 
@@ -729,7 +791,7 @@ const getStyles = (COLORS: any) => StyleSheet.create({
   addLineBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.charcoal, justifyContent: 'center', alignItems: 'center', alignSelf: 'flex-end', marginVertical: 20 },
 
   // Notifications
-  sectionLabel: { fontFamily: 'Outfit_700Bold', fontSize: 16, color: COLORS.charcoal, marginBottom: 16, marginTop: 8 },
+  sectionLabel: { fontFamily: 'Outfit_700Bold', fontSize: 16, color: COLORS.charcoal, marginBottom: 8 },
   reviewRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: COLORS.card, borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: COLORS.bone },
   reviewRowLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   calIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: COLORS.lightgray, justifyContent: 'center', alignItems: 'center' },

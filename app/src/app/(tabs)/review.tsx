@@ -3,11 +3,11 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
   ScrollView,
 } from 'react-native';
+import AnimatedPressable from '../../components/AnimatedPressable';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useFocusEffect, router } from 'expo-router';
 import Animated, {
@@ -185,7 +185,7 @@ export default function ReviewScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={[s.container, s.center]}>
+      <SafeAreaView style={[s.container, s.center]} edges={['top']}>
         <ActivityIndicator size="large" color={COLORS.charcoal} />
       </SafeAreaView>
     );
@@ -200,30 +200,30 @@ export default function ReviewScreen() {
       return (
         <SafeAreaView style={s.container} edges={['top']}>
           <View style={s.content}>
-            
-              <View style={s.overviewHeader}>
-                <Text style={s.overviewHeaderTitle}>Review</Text>
-              </View>
-            
 
-            
-              <View style={s.emptyContainer}>
-                <View style={s.emptyIconCircle}>
-                  <CheckCircle2 size={48} color={COLORS.charcoal} strokeWidth={1.5} />
-                </View>
-                <Text style={s.emptyTitle}>All Caught Up!</Text>
-                <Text style={s.emptySub}>
-                  No reviews are pending right now. All your vocabulary cards are up to date with your FSRS schedule.
-                </Text>
-                <TouchableOpacity
-                  onPress={() => router.replace('/(tabs)/dashboard')}
-                  style={s.goToDashboardBtn}
-                  activeOpacity={0.8}
-                >
-                  <Text style={s.goToDashboardBtnText}>Go to Dashboard</Text>
-                </TouchableOpacity>
+            <View style={s.overviewHeader}>
+              <Text style={s.overviewHeaderTitle}>Review</Text>
+            </View>
+
+
+
+            <View style={s.emptyContainer}>
+              <View style={s.emptyIconCircle}>
+                <CheckCircle2 size={48} color={COLORS.charcoal} strokeWidth={1.5} />
               </View>
-            
+              <Text style={s.emptyTitle}>All Caught Up!</Text>
+              <Text style={s.emptySub}>
+                No reviews are pending right now. All your vocabulary cards are up to date with your FSRS schedule.
+              </Text>
+              <AnimatedPressable
+                onPress={() => router.replace('/(tabs)/dashboard')}
+                style={s.goToDashboardBtn}
+                activeOpacity={0.8}
+              >
+                <Text style={s.goToDashboardBtnText}>Go to Dashboard</Text>
+              </AnimatedPressable>
+            </View>
+
           </View>
         </SafeAreaView>
       );
@@ -233,23 +233,24 @@ export default function ReviewScreen() {
     return (
       <SafeAreaView style={s.container} edges={['top']}>
         <View style={s.content}>
-          
-            <View style={s.overviewHeader}>
-              <Text style={s.overviewHeaderTitle}>Vocabulary Review</Text>
-              <View style={s.pendingBadgeTop}>
-                <Text style={s.pendingBadgeTopText}>
-                  {pendingGroups.reduce((acc, g) => acc + g.count, 0)} Total Due
-                </Text>
-              </View>
-            </View>
-          
 
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: insets.bottom + 90 }}
-          >
-            {/* Main Pending Group Card */}
-            
+          <View style={s.overviewHeader}>
+            <Text style={s.overviewHeaderTitle}>Vocabulary Review</Text>
+            <View style={s.pendingBadgeTop}>
+              <Text style={s.pendingBadgeTopText}>
+                {pendingGroups.reduce((acc, g) => acc + g.count, 0)} Total Due
+              </Text>
+            </View>
+          </View>
+
+
+          <View style={{ flex: 1 }}>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: insets.bottom + 90 }}
+            >
+              {/* Main Pending Group Card */}
+
               <View style={s.mainBatchCard}>
                 <View style={s.batchCardHeader}>
                   <View style={s.sparkleIconWrap}>
@@ -278,25 +279,25 @@ export default function ReviewScreen() {
                 </Text>
 
                 {/* Start Review CTA Button */}
-                <TouchableOpacity
+                <AnimatedPressable
                   onPress={() => handleStartReview(selectedGroup)}
                   style={s.startReviewCTA}
                   activeOpacity={0.85}
                 >
                   <Play size={20} color={COLORS.bg} fill={COLORS.bg} />
                   <Text style={s.startReviewCTAText}>Start Review</Text>
-                </TouchableOpacity>
+                </AnimatedPressable>
               </View>
-            
 
-            {/* If there are more pending groups, display them as a list */}
-            {pendingGroups.length > 1 && (
-              <View style={s.otherGroupsSection}>
-                <Text style={s.otherGroupsTitle}>Other Pending Batches ({pendingGroups.length - 1})</Text>
-                {pendingGroups
-                  .filter((g) => g.date !== selectedGroup.date)
-                  .map((group, index) => (
-                      <TouchableOpacity
+
+              {/* If there are more pending groups, display them as a list */}
+              {pendingGroups.length > 1 && (
+                <View style={s.otherGroupsSection}>
+                  <Text style={s.otherGroupsTitle}>Other Pending Batches ({pendingGroups.length - 1})</Text>
+                  {pendingGroups
+                    .filter((g) => g.date !== selectedGroup.date)
+                    .map((group, index) => (
+                      <AnimatedPressable
                         key={index}
                         onPress={() => setSelectedGroup(group)}
                         style={s.otherGroupRow}
@@ -314,12 +315,13 @@ export default function ReviewScreen() {
                         <View style={s.otherGroupSelectBtn}>
                           <ArrowRight size={16} color={COLORS.charcoal} />
                         </View>
-                      </TouchableOpacity>
-                    
-                  ))}
-              </View>
-            )}
-          </ScrollView>
+                      </AnimatedPressable>
+
+                    ))}
+                </View>
+              )}
+            </ScrollView>
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -331,24 +333,24 @@ export default function ReviewScreen() {
   if (currentIndex >= sessionWords.length) {
     return (
       <SafeAreaView style={s.container} edges={['top']}>
-        
-          <View style={[s.content, s.center, { paddingBottom: Math.max(insets.bottom, 20) + 24 }]}>
-            <View style={s.completeCircle}>
-              <CheckCircle2 size={56} color={COLORS.charcoal} strokeWidth={1.5} />
-            </View>
-            <Text style={s.completeTitle}>Batch Completed! 🎉</Text>
-            <Text style={s.completeSub}>
-              You've successfully reviewed all {sessionWords.length} words for {formatDateDisplay(selectedGroup?.date || '')}.
-            </Text>
-            <TouchableOpacity
-              onPress={handleExitSession}
-              style={s.goToDashboardBtn}
-              activeOpacity={0.8}
-            >
-              <Text style={s.goToDashboardBtnText}>Back to Reviews</Text>
-            </TouchableOpacity>
+
+        <View style={[s.content, s.center, { paddingBottom: Math.max(insets.bottom, 20) + 24 }]}>
+          <View style={s.completeCircle}>
+            <CheckCircle2 size={56} color={COLORS.charcoal} strokeWidth={1.5} />
           </View>
-        
+          <Text style={s.completeTitle}>Batch Completed! 🎉</Text>
+          <Text style={s.completeSub}>
+            You've successfully reviewed all {sessionWords.length} words for {formatDateDisplay(selectedGroup?.date || '')}.
+          </Text>
+          <AnimatedPressable
+            onPress={handleExitSession}
+            style={s.goToDashboardBtn}
+            activeOpacity={0.8}
+          >
+            <Text style={s.goToDashboardBtnText}>Back to Reviews</Text>
+          </AnimatedPressable>
+        </View>
+
       </SafeAreaView>
     );
   }
@@ -362,12 +364,11 @@ export default function ReviewScreen() {
   return (
     <SafeAreaView style={s.container} edges={['top']}>
       <View style={[s.content, { paddingBottom: Math.max(insets.bottom, 20) + 24 }]}>
-        {/* Active Session Header */}
         <View style={s.header}>
           <View style={s.headerLeft}>
-            <TouchableOpacity style={s.iconBtn} onPress={handleExitSession}>
+            <AnimatedPressable style={s.iconBtn} onPress={handleExitSession}>
               <ChevronLeft size={24} color={COLORS.charcoal} strokeWidth={2.5} />
-            </TouchableOpacity>
+            </AnimatedPressable>
             <View>
               <Text style={s.headerTitle}>Reviewing {formatDateDisplay(selectedGroup?.date || '')}</Text>
               <Text style={s.headerSub}>{remaining} Cards Remaining</Text>
@@ -389,7 +390,7 @@ export default function ReviewScreen() {
 
               if (isTop) {
                 return (
-                  <TouchableOpacity
+                  <AnimatedPressable
                     key={card.id || 'top'}
                     activeOpacity={0.9}
                     onPress={handleCardFlip}
@@ -406,7 +407,7 @@ export default function ReviewScreen() {
                       <Text style={s.cardMeaning}>{card.meaning}</Text>
                       <Text style={[s.cardHint, { marginTop: 8 }]}>{card.word}</Text>
                     </Animated.View>
-                  </TouchableOpacity>
+                  </AnimatedPressable>
                 );
               }
 
@@ -441,28 +442,28 @@ export default function ReviewScreen() {
         <View style={s.actions}>
           {isFlipped ? (
             <View style={s.actionsRow}>
-              <TouchableOpacity
+              <AnimatedPressable
                 onPress={() => handleFSRSResponse('forgot')}
                 style={s.forgotBtn}
                 activeOpacity={0.7}
               >
                 <XCircle size={18} color={COLORS.charcoal} />
                 <Text style={s.forgotText}>Forgot</Text>
-              </TouchableOpacity>
+              </AnimatedPressable>
 
-              <TouchableOpacity
+              <AnimatedPressable
                 onPress={() => handleFSRSResponse('remember')}
                 style={s.rememberBtn}
                 activeOpacity={0.7}
               >
                 <CheckCircle2 size={18} color={COLORS.bg} />
                 <Text style={s.rememberText}>Remember</Text>
-              </TouchableOpacity>
+              </AnimatedPressable>
             </View>
           ) : (
-            <TouchableOpacity onPress={handleCardFlip} style={s.flipBtn} activeOpacity={0.7}>
+            <AnimatedPressable onPress={handleCardFlip} style={s.flipBtn} activeOpacity={0.7}>
               <Text style={s.flipBtnText}>Flip Card to Reveal</Text>
-            </TouchableOpacity>
+            </AnimatedPressable>
           )}
         </View>
       </View>

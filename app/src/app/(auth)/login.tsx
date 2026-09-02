@@ -4,13 +4,13 @@ import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
   ScrollView,
 } from 'react-native';
+import AnimatedPressable from '../../components/AnimatedPressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Mail, Lock, User, Globe, ArrowLeft, Eye, EyeOff } from 'lucide-react-native';
@@ -159,12 +159,12 @@ export default function AuthScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <TouchableOpacity
+          <AnimatedPressable
             onPress={() => router.replace('/(tabs)/dashboard')}
             style={s.backBtn}
           >
             <ArrowLeft size={20} color={COLORS.charcoal} />
-          </TouchableOpacity>
+          </AnimatedPressable>
 
           <View style={s.titleSection}>
             <Text style={s.welcomeText}>Sync your vocabulary</Text>
@@ -220,17 +220,17 @@ export default function AuthScreen() {
                 secureTextEntry={!showPassword}
                 style={s.input}
               />
-              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+              <AnimatedPressable onPress={() => setShowPassword(!showPassword)}>
                 {showPassword ? (
                   <EyeOff size={18} color={COLORS.warmgray} />
                 ) : (
                   <Eye size={18} color={COLORS.warmgray} />
                 )}
-              </TouchableOpacity>
+              </AnimatedPressable>
             </View>
           </View>
 
-          <TouchableOpacity
+          <AnimatedPressable
             onPress={handleAuthAction}
             disabled={loading}
             style={s.primaryBtn}
@@ -242,7 +242,7 @@ export default function AuthScreen() {
                 {isSignUp ? 'Create Account' : 'Sign In'}
               </Text>
             )}
-          </TouchableOpacity>
+          </AnimatedPressable>
 
           <View style={s.dividerRow}>
             <View style={s.dividerLine} />
@@ -250,20 +250,20 @@ export default function AuthScreen() {
             <View style={s.dividerLine} />
           </View>
 
-          <TouchableOpacity
+          <AnimatedPressable
             onPress={handleGoogleAuth}
             disabled={loading || !request}
             style={[s.googleBtn, (loading || !request) && { opacity: 0.6 }]}
           >
             <Globe size={18} color={COLORS.charcoal} />
             <Text style={s.googleBtnText}>Continue with Google</Text>
-          </TouchableOpacity>
+          </AnimatedPressable>
 
           <View style={s.toggleRow}>
             <Text style={s.toggleText}>
               {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
             </Text>
-            <TouchableOpacity
+            <AnimatedPressable
               onPress={() => {
                 setIsSignUp(!isSignUp);
                 setErrorMsg('');
@@ -272,7 +272,7 @@ export default function AuthScreen() {
               <Text style={s.toggleLink}>
                 {isSignUp ? 'Sign In' : 'Sign Up'}
               </Text>
-            </TouchableOpacity>
+            </AnimatedPressable>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

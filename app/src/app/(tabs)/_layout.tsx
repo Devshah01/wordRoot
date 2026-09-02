@@ -1,6 +1,7 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import AnimatedPressable from '../../components/AnimatedPressable';
 import { Home, Calendar, BookOpen, User } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppStore } from '../../store/useAppStore';
@@ -42,20 +43,21 @@ function CustomTabBar({ state, navigation }: any) {
           else return null;
 
           return (
-            <TouchableOpacity
-              key={route.key}
-              accessibilityRole="button"
-              accessibilityState={isFocused ? { selected: true } : {}}
-              onPress={onPress}
-              style={styles.tabItem}
-              activeOpacity={0.7}
-            >
-              <IconComponent 
-                size={20} 
-                color={isFocused ? COLORS.charcoal : COLORS.warmgray} 
-                strokeWidth={isFocused ? 2.5 : 2}
-              />
-            </TouchableOpacity>
+            <View key={route.key}>
+              <AnimatedPressable
+                accessibilityRole="button"
+                accessibilityState={isFocused ? { selected: true } : {}}
+                onPress={onPress}
+                style={styles.tabItem}
+                activeOpacity={0.7}
+              >
+                <IconComponent 
+                  size={20} 
+                  color={isFocused ? COLORS.charcoal : COLORS.warmgray} 
+                  strokeWidth={isFocused ? 2.5 : 2}
+                />
+              </AnimatedPressable>
+            </View>
           );
         })}
       </View>
