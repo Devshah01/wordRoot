@@ -89,11 +89,44 @@ export default function CalendarScreen() {
   });
 
   const searchResults = React.useMemo(() => {
-    if (!searchQuery.trim()) return [];
-    const q = searchQuery.toLowerCase();
-    return allWords.filter((w) =>
-      w.word.toLowerCase().includes(q) || (w.meaning && w.meaning.toLowerCase().includes(q))
-    );
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return [];
+
+    const seen = new Set<string>();
+    const uniquePool = allWords.filter(w => {
+      const key = (w.id || `${w.word}-${w.meaning}`).toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    // 1. Primary: Words that start with query (dictionary prefix matching)
+    const startsWithMatches = uniquePool
+      .filter(w => w.word && w.word.trim().toLowerCase().startsWith(q))
+      .sort((a, b) => a.word.trim().toLowerCase().localeCompare(b.word.trim().toLowerCase()));
+
+    // For single letter search (e.g. "y"), strictly dictionary format: only words starting with that letter
+    if (q.length === 1) {
+      return startsWithMatches;
+    }
+
+    const containsMatches = uniquePool
+      .filter(w =>
+        w.word &&
+        !w.word.trim().toLowerCase().startsWith(q) &&
+        w.word.trim().toLowerCase().includes(q)
+      )
+      .sort((a, b) => a.word.trim().toLowerCase().localeCompare(b.word.trim().toLowerCase()));
+
+    const meaningMatches = uniquePool
+      .filter(w =>
+        w.meaning &&
+        !w.word.trim().toLowerCase().includes(q) &&
+        w.meaning.toLowerCase().includes(q)
+      )
+      .sort((a, b) => a.word.trim().toLowerCase().localeCompare(b.word.trim().toLowerCase()));
+
+    return [...startsWithMatches, ...containsMatches, ...meaningMatches];
   }, [allWords, searchQuery]);
 
   // Count words per day for the calendar
@@ -606,20 +639,22 @@ export default function CalendarScreen() {
                         style={s.searchResultRow}
                         activeOpacity={0.7}
                       >
-                        <View style={{ flex: 1 }}>
-                          <Text style={s.searchWord}>{item.word}</Text>
-                          <Text style={s.searchMeaning}>{item.meaning}</Text>
-                        </View>
-                        {item.dateAdded && (
-                          <Text style={s.searchDate}>
-                            {formatLocalDateString(item.dateAdded)}
-                          </Text>
-                        )}
-                        {item.isDraft && (
-                          <View style={{ backgroundColor: COLORS.lightgray, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2, marginLeft: 8 }}>
-                            <Text style={{ fontFamily: 'Inter_500Medium', fontSize: 10, color: COLORS.warmgray }}>Draft</Text>
+                        <View style={s.searchRowTop}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 12 }}>
+                            <Text style={s.searchWord} numberOfLines={1}>{item.word}</Text>
+                            {item.isDraft && (
+                              <View style={{ backgroundColor: COLORS.lightgray, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2, marginLeft: 8 }}>
+                                <Text style={{ fontFamily: 'Inter_500Medium', fontSize: 10, color: COLORS.warmgray }}>Draft</Text>
+                              </View>
+                            )}
                           </View>
-                        )}
+                          {item.dateAdded && (
+                            <Text style={s.searchDate}>
+                              {formatLocalDateString(item.dateAdded)}
+                            </Text>
+                          )}
+                        </View>
+                        <Text style={s.searchMeaning}>{item.meaning}</Text>
                       </AnimatedPressable>
                     
                   ))
@@ -737,10 +772,11 @@ const getStyles = (COLORS: any) => StyleSheet.create({
   // Search
   searchHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: COLORS.bone, gap: 12 },
   searchInput: { flex: 1, fontFamily: 'Inter_400Regular', fontSize: 14, color: COLORS.charcoal, backgroundColor: COLORS.card, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, borderWidth: 1, borderColor: COLORS.bone },
-  searchResultRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: COLORS.bone },
-  searchWord: { fontFamily: 'Outfit_700Bold', fontSize: 15, color: COLORS.charcoal, textTransform: 'capitalize' },
-  searchMeaning: { fontFamily: 'Inter_400Regular', fontSize: 13, color: COLORS.warmgray, marginTop: 2 },
-  searchDate: { fontFamily: 'Inter_400Regular', fontSize: 12, color: COLORS.warmgray, marginLeft: 12 },
+  searchResultRow: { paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: COLORS.bone },
+  searchRowTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  searchWord: { fontFamily: 'Outfit_700Bold', fontSize: 16, color: COLORS.charcoal, textTransform: 'capitalize', flex: 1, marginRight: 12 },
+  searchMeaning: { fontFamily: 'Inter_400Regular', fontSize: 13, color: COLORS.warmgray, lineHeight: 18 },
+  searchDate: { fontFamily: 'Inter_400Regular', fontSize: 12, color: COLORS.warmgray },
 
   // Expanded Card UI
   datePill: {

@@ -149,8 +149,11 @@ export default function DashboardScreen() {
     });
 
   useEffect(() => {
-    if (!searchQuery) { setSearchResults([]); return; }
-    const query = searchQuery.toLowerCase();
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) {
+      setSearchResults([]);
+      return;
+    }
 
     const draftWords = vocabLines
       .filter(l => l.word.trim() && l.meaning.trim())
@@ -158,10 +161,44 @@ export default function DashboardScreen() {
 
     const searchPool = [...words, ...draftWords];
 
-    const matches = searchPool.filter(
-      (w) => w.word.toLowerCase().includes(query) || (w.meaning && w.meaning.toLowerCase().includes(query))
-    );
-    setSearchResults(matches);
+    // Deduplicate words in pool
+    const seen = new Set<string>();
+    const uniquePool = searchPool.filter(w => {
+      const key = ((w as any).id || `${w.word}-${w.meaning}`).toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    // 1. Primary: Words that start with query (dictionary prefix matching)
+    const startsWithMatches = uniquePool
+      .filter(w => w.word && w.word.trim().toLowerCase().startsWith(q))
+      .sort((a, b) => a.word.trim().toLowerCase().localeCompare(b.word.trim().toLowerCase()));
+
+    // For single letter search (e.g. "y"), strictly dictionary format: only words starting with that letter
+    if (q.length === 1) {
+      setSearchResults(startsWithMatches);
+      return;
+    }
+
+    // For multi-letter searches, also include words containing query in word or meaning after prefix matches
+    const containsMatches = uniquePool
+      .filter(w =>
+        w.word &&
+        !w.word.trim().toLowerCase().startsWith(q) &&
+        w.word.trim().toLowerCase().includes(q)
+      )
+      .sort((a, b) => a.word.trim().toLowerCase().localeCompare(b.word.trim().toLowerCase()));
+
+    const meaningMatches = uniquePool
+      .filter(w =>
+        w.meaning &&
+        !w.word.trim().toLowerCase().includes(q) &&
+        w.meaning.toLowerCase().includes(q)
+      )
+      .sort((a, b) => a.word.trim().toLowerCase().localeCompare(b.word.trim().toLowerCase()));
+
+    setSearchResults([...startsWithMatches, ...containsMatches, ...meaningMatches]);
   }, [searchQuery, words, vocabLines]);
 
   const addVocabLine = () => {
@@ -612,13 +649,12 @@ export default function DashboardScreen() {
               ) : (
                 searchResults.map((item, index) => (
                   <AnimatedPressable key={`search-${index}`} onPress={() => handleSearchResultClick(item)} style={s.searchResultRow}>
-                    <View>
-                      <Text style={s.searchWord}>{item.word}</Text>
-                      <Text style={s.searchMeaning}>{item.meaning}</Text>
+                    <View style={s.searchRowTop}>
+                      <Text style={s.searchWord} numberOfLines={1}>{item.word}</Text>
+                      <Text style={s.searchDate}>{formatLocalDateString(item.dateAdded || item.createdAt || new Date())}</Text>
                     </View>
-                    <Text style={s.searchDate}>{formatLocalDateString(item.dateAdded || item.createdAt || new Date())}</Text>
+                    <Text style={s.searchMeaning}>{item.meaning}</Text>
                   </AnimatedPressable>
-
                 ))
               )}
             </ScrollView>
@@ -807,9 +843,10 @@ const getStyles = (COLORS: any) => StyleSheet.create({
   // Search
   searchHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: COLORS.bone, gap: 12 },
   searchInput: { flex: 1, fontFamily: 'Inter_400Regular', fontSize: 14, color: COLORS.charcoal, backgroundColor: COLORS.card, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, borderWidth: 1, borderColor: COLORS.bone },
-  searchResultRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: COLORS.bone },
-  searchWord: { fontFamily: 'Outfit_700Bold', fontSize: 15, color: COLORS.charcoal, textTransform: 'capitalize' },
-  searchMeaning: { fontFamily: 'Inter_400Regular', fontSize: 13, color: COLORS.warmgray, marginTop: 2 },
+  searchResultRow: { paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: COLORS.bone },
+  searchRowTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  searchWord: { fontFamily: 'Outfit_700Bold', fontSize: 16, color: COLORS.charcoal, textTransform: 'capitalize', flex: 1, marginRight: 12 },
+  searchMeaning: { fontFamily: 'Inter_400Regular', fontSize: 13, color: COLORS.warmgray, lineHeight: 18 },
   searchDate: { fontFamily: 'Inter_400Regular', fontSize: 12, color: COLORS.warmgray },
 
   emptyState: { paddingVertical: 48, alignItems: 'center' },
