@@ -1,6 +1,6 @@
 import { Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { LogBox, Platform, View, StyleSheet } from 'react-native';
+import { LogBox, Platform, View, StyleSheet, StatusBar } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { 
   useFonts, 
@@ -63,6 +63,7 @@ export default function RootLayout() {
 
   const checkFirstLaunch = useAppStore(state => state.checkFirstLaunch);
   const isAuthenticated = useAppStore(state => state.isAuthenticated);
+  const isDarkMode = useAppStore(state => state.isDarkMode);
   const [isSplashAnimationComplete, setSplashAnimationComplete] = useState(false);
 
   // Local daily reminder notifications (offline — no server push)
@@ -89,7 +90,12 @@ export default function RootLayout() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#FBFBFA' }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: isDarkMode ? '#121212' : '#FBFBFA' }}>
+      <StatusBar 
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'} 
+        backgroundColor="transparent" 
+        translucent={true} 
+      />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="onboarding" />
