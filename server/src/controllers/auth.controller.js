@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 const prisma = require('../services/db.service');
 const { jwtSecret } = require('../middleware/auth.middleware');
+const nodemailer = require('nodemailer');
 
 const GOOGLE_WEB_CLIENT_ID = process.env.GOOGLE_WEB_CLIENT_ID;
 const GOOGLE_ANDROID_CLIENT_ID = process.env.GOOGLE_ANDROID_CLIENT_ID;
@@ -22,6 +23,17 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // In-memory store for password reset codes (code hash + expiry)
 // Key: email, Value: { codeHash, expiresAt }
 const resetCodes = new Map();
+
+// Set up Brevo SMTP Transporter
+const transporter = nodemailer.createTransport({
+  host: 'smtp-relay.brevo.com',
+  port: 587,
+  secure: false, // true for 465, false for 587
+  auth: {
+    user: process.env.BREVO_SMTP_LOGIN,
+    pass: process.env.BREVO_SMTP_KEY,
+  },
+});
 
 // Helper to sign JWT
 function generateToken(user) {
@@ -230,14 +242,23 @@ async function forgotPassword(req, res) {
 
     resetCodes.set(normalizedEmail, { codeHash, expiresAt });
 
-    // In production you would send this code via email.
-    // For now, we return it in the response for mobile app testing.
-    console.log(`[Password Reset] Code for ${normalizedEmail}: ${code}`);
+    // Send email via Brevo
+    try {
+      await transporter.sendMail({
+        from: '"WordRoot Support" <no-reply@wordroot.app>', // Note: This must be a verified sender in your Brevo account
+        to: normalizedEmail,
+        subject: 'Your Password Reset Code - WordRoot',
+        text: `Your password reset code for WordRoot is: ${code}\n\nIt expires in 15 minutes.`,
+        html: `<p>Your password reset code for WordRoot is: <strong style="font-size: 1.2em;">${code}</strong></p><p>It expires in 15 minutes.</p>`,
+      });
+      console.log(`[Password Reset] Email sent to ${normalizedEmail}`);
+    } catch (emailErr) {
+      console.error('Failed to send reset email via Brevo:', emailErr);
+      return res.status(500).json({ error: 'Failed to send reset email. Please try again later.' });
+    }
 
     res.json({
       message: 'If this email is registered, a reset code has been generated.',
-      // Remove the line below in production — only for development/testing
-      resetCode: code,
     });
   } catch (error) {
     console.error('Forgot password error:', error);

@@ -51,7 +51,11 @@ export default function ForgotPasswordScreen() {
 
     setLoading(true);
     try {
-      await api.auth.forgotPassword({ email: trimmedEmail });
+      const response = await api.auth.forgotPassword({ email: trimmedEmail });
+      if (response && response.resetCode) {
+        // Alert the reset code for development/testing purposes
+        alert(`Test Reset Code: ${response.resetCode}`);
+      }
       setStep('code');
     } catch (err: any) {
       setErrorMsg(err.message || 'Failed to send reset code');
