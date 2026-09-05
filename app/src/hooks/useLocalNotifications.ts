@@ -46,9 +46,9 @@ export function useLocalNotifications() {
           sound: true,
         },
         trigger: {
+          type: 'daily',
           hour: hours,
           minute: minutes,
-          repeats: true,
         } as any,
       });
     } catch (e) {
