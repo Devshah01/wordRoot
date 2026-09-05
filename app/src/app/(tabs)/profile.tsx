@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Dimensions,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -45,6 +46,8 @@ export default function ProfileScreen() {
   const [editNameValue, setEditNameValue] = useState('');
   const [isLogoutModalVisible, setIsLogoutModalVisible] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isClearingData, setIsClearingData] = useState(false);
+  const [isKeepingData, setIsKeepingData] = useState(false);
   const slideAnim = useSharedValue(-SCREEN_WIDTH);
   
   const [showTimePicker, setShowTimePicker] = useState(false);
@@ -118,6 +121,8 @@ export default function ProfileScreen() {
 
   const executeLogout = async (clearLocalData: boolean) => {
     setIsLoggingOut(true);
+    if (clearLocalData) setIsClearingData(true);
+    else setIsKeepingData(true);
     try {
       // Attempt a background sync before logout so cloud has latest data
       await performCloudSync();
@@ -126,6 +131,8 @@ export default function ProfileScreen() {
     }
     await clearAuth(clearLocalData);
     setIsLoggingOut(false);
+    setIsClearingData(false);
+    setIsKeepingData(false);
     setIsLogoutModalVisible(false);
   };
 
@@ -399,10 +406,16 @@ export default function ProfileScreen() {
                   activeOpacity={0.7}
                 >
                   <View style={[s.logoutOptionIcon, { backgroundColor: COLORS.bg }]}>
-                    <Smartphone size={22} color={COLORS.charcoal} strokeWidth={2} />
+                    {isKeepingData ? (
+                      <ActivityIndicator size="small" color={COLORS.charcoal} />
+                    ) : (
+                      <Smartphone size={22} color={COLORS.charcoal} strokeWidth={2} />
+                    )}
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={[s.logoutOptionTitle, { color: COLORS.charcoal }]}>Keep Words on Device</Text>
+                    <Text style={[s.logoutOptionTitle, { color: COLORS.charcoal }]}>
+                      {isKeepingData ? 'Logging out…' : 'Keep Words on Device'}
+                    </Text>
                     <Text style={[s.logoutOptionDesc, { color: COLORS.warmgray }]}>
                       Log out and continue studying your words offline in guest mode.
                     </Text>
@@ -417,10 +430,16 @@ export default function ProfileScreen() {
                   activeOpacity={0.7}
                 >
                   <View style={[s.logoutOptionIcon, { backgroundColor: isDarkMode ? '#3D1B1B' : '#FEE2E2' }]}>
-                    <Trash2 size={22} color="#EF4444" strokeWidth={2} />
+                    {isClearingData ? (
+                      <ActivityIndicator size="small" color="#EF4444" />
+                    ) : (
+                      <Trash2 size={22} color="#EF4444" strokeWidth={2} />
+                    )}
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={[s.logoutOptionTitle, { color: '#EF4444' }]}>Clear Words from Device</Text>
+                    <Text style={[s.logoutOptionTitle, { color: '#EF4444' }]}>
+                      {isClearingData ? 'Clearing data…' : 'Clear Words from Device'}
+                    </Text>
                     <Text style={[s.logoutOptionDesc, { color: isDarkMode ? '#FCA5A5' : '#991B1B' }]}>
                       Wipe local storage on this phone. Recommended for shared or public devices.
                     </Text>

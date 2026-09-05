@@ -67,6 +67,10 @@ export const api = {
       request('/api/auth/login', { method: 'POST', body: JSON.stringify(body) }),
     google: (body: any) =>
       request('/api/auth/google', { method: 'POST', body: JSON.stringify(body) }),
+    forgotPassword: (body: { email: string }) =>
+      request('/api/auth/forgot-password', { method: 'POST', body: JSON.stringify(body) }),
+    resetPassword: (body: { email: string; code: string; newPassword: string }) =>
+      request('/api/auth/reset-password', { method: 'POST', body: JSON.stringify(body) }),
   },
 
   words: {

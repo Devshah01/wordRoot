@@ -19,6 +19,10 @@ const googleClient = new OAuth2Client(GOOGLE_WEB_CLIENT_ID);
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// In-memory store for password reset codes (code hash + expiry)
+// Key: email, Value: { codeHash, expiresAt }
+const resetCodes = new Map();
+
 // Helper to sign JWT
 function generateToken(user) {
   return jwt.sign({ id: user.id, email: user.email }, jwtSecret, { expiresIn: '30d' });
@@ -198,8 +202,106 @@ async function googleAuth(req, res) {
   }
 }
 
+// 4. Forgot Password — generate a 6-digit reset code
+async function forgotPassword(req, res) {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    const normalizedEmail = String(email).trim().toLowerCase();
+
+    if (!EMAIL_REGEX.test(normalizedEmail)) {
+      return res.status(400).json({ error: 'Please enter a valid email address' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+    if (!user || !user.passwordHash) {
+      // Don't reveal whether the email exists — always return success
+      return res.json({ message: 'If this email is registered, a reset code has been generated.' });
+    }
+
+    // Generate a 6-digit code
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const codeHash = await bcrypt.hash(code, 10);
+    const expiresAt = Date.now() + 15 * 60 * 1000; // 15 minutes
+
+    resetCodes.set(normalizedEmail, { codeHash, expiresAt });
+
+    // In production you would send this code via email.
+    // For now, we return it in the response for mobile app testing.
+    console.log(`[Password Reset] Code for ${normalizedEmail}: ${code}`);
+
+    res.json({
+      message: 'If this email is registered, a reset code has been generated.',
+      // Remove the line below in production — only for development/testing
+      resetCode: code,
+    });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ error: 'Failed to process password reset request' });
+  }
+}
+
+// 5. Reset Password — verify code and set new password
+async function resetPassword(req, res) {
+  try {
+    const { email, code, newPassword } = req.body;
+
+    if (!email || !code || !newPassword) {
+      return res.status(400).json({ error: 'Email, code, and new password are required' });
+    }
+
+    const normalizedEmail = String(email).trim().toLowerCase();
+
+    if (typeof newPassword !== 'string' || newPassword.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters long' });
+    }
+
+    if (newPassword.length > 128) {
+      return res.status(400).json({ error: 'Password must be 128 characters or fewer' });
+    }
+
+    const stored = resetCodes.get(normalizedEmail);
+    if (!stored) {
+      return res.status(400).json({ error: 'No reset code found. Please request a new one.' });
+    }
+
+    if (Date.now() > stored.expiresAt) {
+      resetCodes.delete(normalizedEmail);
+      return res.status(400).json({ error: 'Reset code has expired. Please request a new one.' });
+    }
+
+    const isValid = await bcrypt.compare(String(code), stored.codeHash);
+    if (!isValid) {
+      return res.status(400).json({ error: 'Invalid reset code' });
+    }
+
+    // Update password
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(newPassword, salt);
+
+    await prisma.user.update({
+      where: { email: normalizedEmail },
+      data: { passwordHash },
+    });
+
+    // Remove used code
+    resetCodes.delete(normalizedEmail);
+
+    res.json({ message: 'Password has been reset successfully' });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ error: 'Failed to reset password' });
+  }
+}
+
 module.exports = {
   register,
   login,
   googleAuth,
+  forgotPassword,
+  resetPassword,
 };

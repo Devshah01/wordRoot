@@ -25,8 +25,21 @@ const googleAuthLimiter = rateLimit({
   },
 });
 
+// Rate limiter for password reset (stricter to prevent abuse)
+const resetLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: {
+    error: 'Too many password reset attempts. Please try again after 15 minutes.',
+  },
+});
+
 router.post('/register', authLimiter, authController.register);
 router.post('/login', authLimiter, authController.login);
 router.post('/google', googleAuthLimiter, authController.googleAuth);
+router.post('/forgot-password', resetLimiter, authController.forgotPassword);
+router.post('/reset-password', resetLimiter, authController.resetPassword);
 
 module.exports = router;

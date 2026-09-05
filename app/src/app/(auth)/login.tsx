@@ -4,6 +4,7 @@ import {
   View,
   Text,
   TextInput,
+  Image,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
@@ -14,18 +15,18 @@ import AnimatedPressable from '../../components/AnimatedPressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Mail, Lock, User, Globe, ArrowLeft, Eye, EyeOff } from 'lucide-react-native';
-import * as Google from 'expo-auth-session/providers/google';
-import * as WebBrowser from 'expo-web-browser';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { useAppStore } from '../../store/useAppStore';
 import { api } from '../../services/api';
 import { performCloudSync } from '../../services/sync';
 import { APP_COLORS } from '../../constants/theme';
 
-WebBrowser.maybeCompleteAuthSession();
-
 const GOOGLE_WEB_CLIENT_ID = '238664083379-64r2lft68p858gqrectk4uh1dhh0pbtc.apps.googleusercontent.com';
-const GOOGLE_ANDROID_CLIENT_ID = '238664083379-a6e9tk3c1lvrct7o948c81jfr5ui4h63.apps.googleusercontent.com';
-const GOOGLE_IOS_CLIENT_ID = '238664083379-aidtfn1h9ikeqrlqg1vk6727m4k619bh.apps.googleusercontent.com';
+
+GoogleSignin.configure({
+  webClientId: GOOGLE_WEB_CLIENT_ID,
+});
+
 
 export default function AuthScreen() {
   const { setAuth, loadLocalDatabase, draftVocabLines, setDraftVocabLines, isDarkMode } = useAppStore();
@@ -40,12 +41,6 @@ export default function AuthScreen() {
 
   const COLORS = isDarkMode ? APP_COLORS.dark : APP_COLORS.light;
   const s = useMemo(() => getStyles(COLORS, isDarkMode), [COLORS, isDarkMode]);
-
-  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-    webClientId: GOOGLE_WEB_CLIENT_ID,
-    androidClientId: GOOGLE_ANDROID_CLIENT_ID,
-    iosClientId: GOOGLE_IOS_CLIENT_ID,
-  });
 
   const runPostAuthSync = useCallback(() => {
     performCloudSync({
@@ -75,19 +70,6 @@ export default function AuthScreen() {
       setLoading(false);
     }
   }, [runPostAuthSync, setAuth]);
-
-  useEffect(() => {
-    if (response?.type === 'success') {
-      const idToken = response.params?.id_token || (response as any).authentication?.idToken;
-      if (idToken) {
-        handleGoogleToken(idToken);
-      } else {
-        setErrorMsg('No ID token received from Google. Please try again.');
-      }
-    } else if (response?.type === 'error') {
-      setErrorMsg(response.error?.message || 'Google authentication failed. Please try again.');
-    }
-  }, [response, handleGoogleToken]);
 
   const handleAuthAction = async () => {
     setErrorMsg('');
@@ -143,9 +125,28 @@ export default function AuthScreen() {
     }
   };
 
-  const handleGoogleAuth = () => {
+  const handleGoogleAuth = async () => {
     setErrorMsg('');
-    promptAsync();
+    try {
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      const userInfo = await GoogleSignin.signIn();
+      const idToken = userInfo.data?.idToken || (userInfo as any).idToken;
+      if (idToken) {
+        handleGoogleToken(idToken);
+      } else {
+        setErrorMsg('Google Sign-In failed: No ID token received.');
+      }
+    } catch (error: any) {
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        // user cancelled the login flow
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        // operation (e.g. sign in) is in progress already
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        setErrorMsg('Play services not available or outdated');
+      } else {
+        setErrorMsg(error.message || 'Google Sign-In failed. Please try again.');
+      }
+    }
   };
 
   return (
@@ -168,7 +169,14 @@ export default function AuthScreen() {
 
           <View style={s.titleSection}>
             <Text style={s.welcomeText}>Sync your vocabulary</Text>
-            <Text style={s.brandText}>WordRoot 🌿</Text>
+            <View style={s.brandRow}>
+              <Image
+                source={require('../../../assets/images/icon.png')}
+                style={s.brandLogo}
+                resizeMode="contain"
+              />
+              <Text style={s.brandText}>WordRoot</Text>
+            </View>
             <Text style={s.subtitle}>
               {isSignUp
                 ? 'Create an account to back up and sync across devices. The app keeps working offline.'
@@ -230,6 +238,15 @@ export default function AuthScreen() {
             </View>
           </View>
 
+          {!isSignUp && (
+            <AnimatedPressable
+              onPress={() => router.push('/(auth)/forgot-password')}
+              style={s.forgotRow}
+            >
+              <Text style={s.forgotText}>Forgot password?</Text>
+            </AnimatedPressable>
+          )}
+
           <AnimatedPressable
             onPress={handleAuthAction}
             disabled={loading}
@@ -252,8 +269,8 @@ export default function AuthScreen() {
 
           <AnimatedPressable
             onPress={handleGoogleAuth}
-            disabled={loading || !request}
-            style={[s.googleBtn, (loading || !request) && { opacity: 0.6 }]}
+            disabled={loading}
+            style={[s.googleBtn, loading && { opacity: 0.6 }]}
           >
             <Globe size={18} color={COLORS.charcoal} />
             <Text style={s.googleBtnText}>Continue with Google</Text>
@@ -307,11 +324,21 @@ const getStyles = (COLORS: any, isDarkMode: boolean) =>
       fontSize: 28,
       color: COLORS.charcoal,
     },
+    brandRow: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      marginBottom: 8,
+      gap: 8,
+    },
     brandText: {
       fontFamily: 'Outfit_700Bold',
       fontSize: 28,
       color: COLORS.charcoal,
-      marginBottom: 8,
+    },
+    brandLogo: {
+      width: 32,
+      height: 32,
+      borderRadius: 6,
     },
     subtitle: {
       fontFamily: 'Inter_400Regular',
@@ -335,6 +362,17 @@ const getStyles = (COLORS: any, isDarkMode: boolean) =>
     form: {
       gap: 12,
       marginBottom: 24,
+    },
+    forgotRow: {
+      alignSelf: 'flex-end' as const,
+      marginTop: -16,
+      marginBottom: 16,
+    },
+    forgotText: {
+      fontFamily: 'Inter_500Medium',
+      fontSize: 13,
+      color: COLORS.warmgray,
+      textDecorationLine: 'underline' as const,
     },
     inputRow: {
       flexDirection: 'row',
