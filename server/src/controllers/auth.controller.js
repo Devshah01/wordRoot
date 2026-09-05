@@ -245,7 +245,7 @@ async function forgotPassword(req, res) {
     // Send email via Brevo
     try {
       await transporter.sendMail({
-        from: '"WordRoot Support" <no-reply@wordroot.app>', // Note: This must be a verified sender in your Brevo account
+        from: process.env.BREVO_SENDER_EMAIL || '"WordRoot Support" <devshah192004@gmail.com>', // MUST be a verified sender in Brevo
         to: normalizedEmail,
         subject: 'Your Password Reset Code - WordRoot',
         text: `Your password reset code for WordRoot is: ${code}\n\nIt expires in 15 minutes.`,
