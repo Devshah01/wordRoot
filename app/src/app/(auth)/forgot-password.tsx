@@ -310,7 +310,7 @@ export default function ForgotPasswordScreen() {
 
               <AnimatedPressable
                 onPress={() => router.replace('/(auth)/login')}
-                style={s.primaryBtn}
+                style={[s.primaryBtn, { width: '100%' }]}
               >
                 <Text style={s.primaryBtnText}>Back to Sign In</Text>
               </AnimatedPressable>

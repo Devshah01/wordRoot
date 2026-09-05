@@ -249,7 +249,36 @@ async function forgotPassword(req, res) {
         to: normalizedEmail,
         subject: 'Your Password Reset Code - WordRoot',
         text: `Your password reset code for WordRoot is: ${code}\n\nIt expires in 15 minutes.`,
-        html: `<p>Your password reset code for WordRoot is: <strong style="font-size: 1.2em;">${code}</strong></p><p>It expires in 15 minutes.</p>`,
+        html: `
+          <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #FBFBFA; padding: 40px 20px; color: #1A1A1A;">
+            <div style="max-width: 500px; margin: 0 auto; background-color: #FFFFFF; padding: 40px; border-radius: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid #EAEAEA;">
+              
+              <div style="text-align: center; margin-bottom: 32px;">
+                <img src="https://raw.githubusercontent.com/Devshah01/wordRoot/main/app-icon-transparent-512.png" alt="WordRoot" style="width: 64px; height: 64px; border-radius: 16px;" />
+                <h1 style="font-size: 24px; margin-top: 16px; margin-bottom: 0; font-weight: 700; color: #1A1A1A;">WordRoot</h1>
+              </div>
+
+              <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 16px; color: #1A1A1A;">Password Reset Request</h2>
+              <p style="font-size: 15px; line-height: 1.6; color: #4A4A4A; margin-bottom: 32px;">
+                We received a request to reset your password. Enter the 6-digit code below in the app to continue:
+              </p>
+
+              <div style="text-align: center; margin-bottom: 32px;">
+                <div style="background-color: #F5F5F5; border-radius: 16px; padding: 20px; display: inline-block; border: 1px solid #EAEAEA;">
+                  <span style="font-size: 32px; font-weight: 700; letter-spacing: 6px; color: #1A1A1A; margin-left: 6px;">${code}</span>
+                </div>
+              </div>
+
+              <p style="font-size: 14px; color: #71717A; line-height: 1.5; margin-bottom: 0;">
+                This code will expire in 15 minutes. If you didn't request a password reset, you can safely ignore this email.
+              </p>
+
+            </div>
+            <div style="text-align: center; margin-top: 24px;">
+              <p style="font-size: 12px; color: #A1A1AA;">&copy; ${new Date().getFullYear()} WordRoot. All rights reserved.</p>
+            </div>
+          </div>
+        `,
       });
       console.log(`[Password Reset] Email sent to ${normalizedEmail}`);
     } catch (emailErr) {
