@@ -21,6 +21,7 @@ import { useAppStore } from '../../store/useAppStore';
 import { APP_COLORS } from '../../constants/theme';
 import { computeTotalReviews } from '../../services/localData';
 import { performCloudSync, getLastSyncLabel } from '../../services/sync';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 export default function ProfileScreen() {
   const {
@@ -128,6 +129,12 @@ export default function ProfileScreen() {
       await performCloudSync();
     } catch {
       // Continue even if network is unavailable
+    }
+    // Sign out from Google SDK so the account picker shows next time
+    try {
+      await GoogleSignin.signOut();
+    } catch {
+      // Not a Google user, ignore
     }
     await clearAuth(clearLocalData);
     setIsLoggingOut(false);
