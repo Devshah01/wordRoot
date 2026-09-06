@@ -221,9 +221,9 @@ export default function DashboardScreen() {
     const validEntries = vocabLines.filter((line) => line.word.trim() && line.meaning.trim());
 
     // Find modified saved words
-    const todayStr = formatLocalDateString(new Date());
+    const targetDateStr = formatLocalDateString(currentDashboardDate);
     const originalTodayWords = words
-      .filter(w => w.dateAdded && formatLocalDateString(w.dateAdded) === todayStr)
+      .filter(w => w.dateAdded && formatLocalDateString(w.dateAdded) === targetDateStr)
       .sort((a, b) => new Date(a.dateAdded).getTime() - new Date(b.dateAdded).getTime());
 
     const modifiedWords = editedSavedWords.filter((editedWord, i) => {
