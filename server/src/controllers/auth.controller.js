@@ -20,9 +20,8 @@ const googleClient = new OAuth2Client(GOOGLE_WEB_CLIENT_ID);
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// In-memory store for password reset codes (code hash + expiry)
-// Key: email, Value: { codeHash, expiresAt }
-const resetCodes = new Map();
+// Password reset codes are securely hashed and stored in PostgreSQL (password_resets table)
+
 
 // Set up Brevo SMTP Transporter
 const transporter = nodemailer.createTransport({
@@ -238,9 +237,21 @@ async function forgotPassword(req, res) {
     // Generate a 6-digit code
     const code = String(Math.floor(100000 + Math.random() * 900000));
     const codeHash = await bcrypt.hash(code, 10);
-    const expiresAt = Date.now() + 15 * 60 * 1000; // 15 minutes
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
-    resetCodes.set(normalizedEmail, { codeHash, expiresAt });
+    // Store in PostgreSQL database (upsert replaces any existing code for this email)
+    await prisma.passwordReset.upsert({
+      where: { email: normalizedEmail },
+      create: {
+        email: normalizedEmail,
+        codeHash,
+        expiresAt,
+      },
+      update: {
+        codeHash,
+        expiresAt,
+      },
+    });
 
     // Send email via Brevo
     try {
@@ -314,17 +325,19 @@ async function resetPassword(req, res) {
       return res.status(400).json({ error: 'Password must be 128 characters or fewer' });
     }
 
-    const stored = resetCodes.get(normalizedEmail);
-    if (!stored) {
+    const resetRecord = await prisma.passwordReset.findUnique({
+      where: { email: normalizedEmail },
+    });
+    if (!resetRecord) {
       return res.status(400).json({ error: 'No reset code found. Please request a new one.' });
     }
 
-    if (Date.now() > stored.expiresAt) {
-      resetCodes.delete(normalizedEmail);
+    if (new Date() > resetRecord.expiresAt) {
+      await prisma.passwordReset.delete({ where: { email: normalizedEmail } }).catch(() => {});
       return res.status(400).json({ error: 'Reset code has expired. Please request a new one.' });
     }
 
-    const isValid = await bcrypt.compare(String(code), stored.codeHash);
+    const isValid = await bcrypt.compare(String(code), resetRecord.codeHash);
     if (!isValid) {
       return res.status(400).json({ error: 'Invalid reset code' });
     }
@@ -338,8 +351,10 @@ async function resetPassword(req, res) {
       data: { passwordHash },
     });
 
-    // Remove used code
-    resetCodes.delete(normalizedEmail);
+    // Remove used code from database
+    await prisma.passwordReset.delete({
+      where: { email: normalizedEmail },
+    }).catch(() => {});
 
     res.json({ message: 'Password has been reset successfully' });
   } catch (error) {
