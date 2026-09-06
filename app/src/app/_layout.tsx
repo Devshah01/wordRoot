@@ -22,23 +22,6 @@ import AnimatedSplashScreen from '../components/AnimatedSplashScreen';
 import { useLocalNotifications } from '../hooks/useLocalNotifications';
 import { initSyncListener } from '../services/sync';
 
-// Safe WebCrypto fallback for non-https LAN web preview
-if (Platform.OS === 'web' && typeof window !== 'undefined') {
-  if (!window.crypto) {
-    (window as any).crypto = {};
-  }
-  if (!window.crypto.subtle) {
-    (window as any).crypto.subtle = {
-      digest: async () => new ArrayBuffer(32),
-      getRandomValues: (arr: any) => {
-        for (let i = 0; i < arr.length; i++) {
-          arr[i] = Math.floor(Math.random() * 256);
-        }
-        return arr;
-      },
-    };
-  }
-}
 
 LogBox.ignoreLogs([
   'SafeAreaView has been deprecated',
