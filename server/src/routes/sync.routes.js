@@ -2,20 +2,66 @@ const express = require('express');
 const router = express.Router();
 const { authenticateToken } = require('../middleware/auth.middleware');
 const prisma = require('../services/db.service');
+const { z } = require('zod');
+
+// --- Zod Schemas ---
+
+const fsrsSchema = z.object({
+  fsrsStability: z.number().optional(),
+  fsrsDifficulty: z.number().optional(),
+  fsrsLapses: z.number().int().optional(),
+  fsrsReps: z.number().int().optional(),
+  fsrsState: z.string().optional(),
+  lastReview: z.coerce.date().nullable().optional(),
+  nextReview: z.coerce.date().nullable().optional(),
+  reviewCount: z.number().int().optional(),
+});
+
+const addDataSchema = fsrsSchema.extend({
+  word: z.string().min(1, "Word is required"),
+  meaning: z.string().min(1, "Meaning is required"),
+  dateAdded: z.coerce.date().optional(),
+});
+
+const updatedWordSchema = fsrsSchema.extend({
+  word: z.string().min(1).optional(),
+  meaning: z.string().min(1).optional(),
+  dateAdded: z.coerce.date().optional(),
+});
+
+const syncItemSchema = z.object({
+  id: z.union([z.string(), z.number()]).optional(),
+  wordId: z.string().min(1, 'Missing wordId'),
+  action: z.enum(['add', 'update', 'review', 'delete']),
+  data: z.any().optional(),
+});
+
+const syncQueueSchema = z.array(syncItemSchema);
 
 router.use(authenticateToken); // Protect all routes
 
 // Sync endpoint to batch update words from offline queue
 router.post('/', async (req, res) => {
   try {
-    const { syncQueue } = req.body;
+    const { syncQueue: rawSyncQueue } = req.body;
     const userId = req.user.id;
 
-    if (!Array.isArray(syncQueue) || syncQueue.length === 0) {
+    // Validate the outer array structure first
+    const queueValidation = syncQueueSchema.safeParse(rawSyncQueue);
+    if (!queueValidation.success) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid syncQueue format', 
+        errors: queueValidation.error.errors 
+      });
+    }
+
+    const syncQueue = queueValidation.data;
+
+    if (syncQueue.length === 0) {
       return res.json({ success: true, message: 'No items to sync' });
     }
 
-    // Process each item individually to prevent one failure from rolling back everything
     let successCount = 0;
     let failCount = 0;
     const successIds = [];
@@ -24,18 +70,14 @@ router.post('/', async (req, res) => {
       try {
         const { action, data, wordId } = item;
 
-        if (!wordId) {
-          throw new Error('Missing wordId in sync item');
-        }
-
         if (action === 'add') {
-          if (!data || typeof data.word !== 'string' || typeof data.meaning !== 'string') {
-            throw new Error('Invalid data for add action');
-          }
-          const wordKey = data.word.trim().toLowerCase();
-          const dateAdded = data.dateAdded ? new Date(data.dateAdded) : new Date();
-          const lastReview = data.lastReview ? new Date(data.lastReview) : null;
-          const nextReview = data.nextReview ? new Date(data.nextReview) : dateAdded;
+          // Validate add data
+          const parsedData = addDataSchema.parse(data);
+          
+          const wordKey = parsedData.word.trim().toLowerCase();
+          const dateAdded = parsedData.dateAdded || new Date();
+          const lastReview = parsedData.lastReview || null;
+          const nextReview = parsedData.nextReview || dateAdded;
 
           const existing = await prisma.word.findFirst({
             where: {
@@ -51,15 +93,15 @@ router.post('/', async (req, res) => {
             await prisma.word.update({
               where: { id: existing.id },
               data: {
-                meaning: data.meaning.trim(),
-                fsrsStability: data.fsrsStability !== undefined ? data.fsrsStability : undefined,
-                fsrsDifficulty: data.fsrsDifficulty !== undefined ? data.fsrsDifficulty : undefined,
-                fsrsLapses: data.fsrsLapses !== undefined ? data.fsrsLapses : undefined,
-                fsrsReps: data.fsrsReps !== undefined ? data.fsrsReps : undefined,
-                fsrsState: data.fsrsState || undefined,
-                lastReview: data.lastReview ? new Date(data.lastReview) : undefined,
-                nextReview: data.nextReview ? new Date(data.nextReview) : undefined,
-                reviewCount: data.reviewCount !== undefined ? data.reviewCount : undefined,
+                meaning: parsedData.meaning.trim(),
+                fsrsStability: parsedData.fsrsStability,
+                fsrsDifficulty: parsedData.fsrsDifficulty,
+                fsrsLapses: parsedData.fsrsLapses,
+                fsrsReps: parsedData.fsrsReps,
+                fsrsState: parsedData.fsrsState,
+                lastReview: parsedData.lastReview,
+                nextReview: parsedData.nextReview,
+                reviewCount: parsedData.reviewCount,
               },
             });
           } else {
@@ -68,36 +110,33 @@ router.post('/', async (req, res) => {
                 id: wordId,
                 userId,
                 word: wordKey,
-                meaning: data.meaning.trim(),
+                meaning: parsedData.meaning.trim(),
                 dateAdded,
-                fsrsStability: data.fsrsStability !== undefined ? data.fsrsStability : 1.0,
-                fsrsDifficulty: data.fsrsDifficulty !== undefined ? data.fsrsDifficulty : 5.0,
-                fsrsLapses: data.fsrsLapses !== undefined ? data.fsrsLapses : 0,
-                fsrsReps: data.fsrsReps !== undefined ? data.fsrsReps : 0,
-                fsrsState: data.fsrsState || 'New',
+                fsrsStability: parsedData.fsrsStability ?? 1.0,
+                fsrsDifficulty: parsedData.fsrsDifficulty ?? 5.0,
+                fsrsLapses: parsedData.fsrsLapses ?? 0,
+                fsrsReps: parsedData.fsrsReps ?? 0,
+                fsrsState: parsedData.fsrsState || 'New',
                 lastReview,
                 nextReview,
-                reviewCount: data.reviewCount !== undefined ? data.reviewCount : 0,
+                reviewCount: parsedData.reviewCount ?? 0,
               },
             });
           }
         } else if (action === 'update' || action === 'review') {
-          const updatedWord = data?.updatedWord || data;
-          if (!updatedWord) {
+          const rawUpdatedWord = data?.updatedWord || data;
+          if (!rawUpdatedWord) {
             throw new Error('Missing payload data for update/review action');
           }
-          const wordKey = typeof updatedWord.word === 'string' ? updatedWord.word.trim().toLowerCase() : '';
+          
+          // Validate update data
+          const parsedData = updatedWordSchema.parse(rawUpdatedWord);
+          const wordKey = parsedData.word ? parsedData.word.trim().toLowerCase() : undefined;
+          
           const orConditions = [{ id: wordId }];
           if (wordKey) {
             orConditions.push({ word: wordKey });
           }
-
-          const lastReviewVal = updatedWord.lastReview !== undefined
-            ? (updatedWord.lastReview ? new Date(updatedWord.lastReview) : null)
-            : undefined;
-          const nextReviewVal = updatedWord.nextReview !== undefined
-            ? (updatedWord.nextReview ? new Date(updatedWord.nextReview) : undefined)
-            : undefined;
 
           const updateResult = await prisma.word.updateMany({
             where: {
@@ -105,37 +144,37 @@ router.post('/', async (req, res) => {
               OR: orConditions,
             },
             data: {
-              word: wordKey || undefined,
-              meaning: typeof updatedWord.meaning === 'string' ? updatedWord.meaning.trim() : undefined,
-              fsrsStability: updatedWord.fsrsStability,
-              fsrsDifficulty: updatedWord.fsrsDifficulty,
-              fsrsLapses: updatedWord.fsrsLapses,
-              fsrsReps: updatedWord.fsrsReps,
-              fsrsState: updatedWord.fsrsState,
-              lastReview: lastReviewVal,
-              nextReview: nextReviewVal,
-              reviewCount: updatedWord.reviewCount,
+              word: wordKey,
+              meaning: parsedData.meaning ? parsedData.meaning.trim() : undefined,
+              fsrsStability: parsedData.fsrsStability,
+              fsrsDifficulty: parsedData.fsrsDifficulty,
+              fsrsLapses: parsedData.fsrsLapses,
+              fsrsReps: parsedData.fsrsReps,
+              fsrsState: parsedData.fsrsState,
+              lastReview: parsedData.lastReview,
+              nextReview: parsedData.nextReview,
+              reviewCount: parsedData.reviewCount,
             },
           });
 
           // If no existing row was matched and word text + meaning are present, upsert to prevent review loss
           if (updateResult.count === 0) {
-            if (wordKey && typeof updatedWord.meaning === 'string') {
+            if (wordKey && parsedData.meaning) {
               await prisma.word.create({
                 data: {
                   id: wordId,
                   userId,
                   word: wordKey,
-                  meaning: updatedWord.meaning.trim(),
-                  dateAdded: updatedWord.dateAdded ? new Date(updatedWord.dateAdded) : new Date(),
-                  fsrsStability: updatedWord.fsrsStability !== undefined ? updatedWord.fsrsStability : 1.0,
-                  fsrsDifficulty: updatedWord.fsrsDifficulty !== undefined ? updatedWord.fsrsDifficulty : 5.0,
-                  fsrsLapses: updatedWord.fsrsLapses !== undefined ? updatedWord.fsrsLapses : 0,
-                  fsrsReps: updatedWord.fsrsReps !== undefined ? updatedWord.fsrsReps : 0,
-                  fsrsState: updatedWord.fsrsState || 'New',
-                  lastReview: lastReviewVal || null,
-                  nextReview: nextReviewVal || new Date(),
-                  reviewCount: updatedWord.reviewCount !== undefined ? updatedWord.reviewCount : 0,
+                  meaning: parsedData.meaning.trim(),
+                  dateAdded: parsedData.dateAdded || new Date(),
+                  fsrsStability: parsedData.fsrsStability ?? 1.0,
+                  fsrsDifficulty: parsedData.fsrsDifficulty ?? 5.0,
+                  fsrsLapses: parsedData.fsrsLapses ?? 0,
+                  fsrsReps: parsedData.fsrsReps ?? 0,
+                  fsrsState: parsedData.fsrsState || 'New',
+                  lastReview: parsedData.lastReview || null,
+                  nextReview: parsedData.nextReview || new Date(),
+                  reviewCount: parsedData.reviewCount ?? 0,
                 },
               });
             } else {
@@ -155,14 +194,12 @@ router.post('/', async (req, res) => {
               OR: orConditions,
             },
           });
-        } else {
-          throw new Error(`Unsupported sync action: "${action}"`);
         }
 
         successCount++;
         if (item.id) successIds.push(item.id);
       } catch (err) {
-        console.error(`Failed to process sync item for wordId ${item.wordId}:`, err);
+        console.error(`Failed to process sync item for wordId ${item?.wordId || 'unknown'}:`, err.message || err);
         failCount++;
       }
     }
