@@ -171,6 +171,33 @@ export default function CalendarScreen() {
       return;
     }
 
+    const allNormalizedEntries = [
+      ...validDrafts.map(e => ({ id: undefined, word: e.word.trim().toLowerCase() })),
+      ...modifiedWords.map(e => ({ id: e.id, word: e.word.trim().toLowerCase() })),
+    ];
+
+    // Check duplicate words within the current submission
+    const seenWordsInBatch = new Set<string>();
+    for (const item of allNormalizedEntries) {
+      if (seenWordsInBatch.has(item.word)) {
+        alert(`"${item.word}" is listed more than once in your entries.`);
+        return;
+      }
+      seenWordsInBatch.add(item.word);
+    }
+
+    // Check against existing words in vocabulary (excluding the word itself if editing)
+    const wordExists = allNormalizedEntries.some(entry =>
+      words.some(w =>
+        w.word.toLowerCase() === entry.word && (entry.id ? w.id !== entry.id : true)
+      )
+    );
+
+    if (wordExists) {
+      alert('This word is already in your vocabulary.');
+      return;
+    }
+
     try {
       const now = new Date();
       const isSelectedToday = formatLocalDateString(selectedDate) === formatLocalDateString(now);
