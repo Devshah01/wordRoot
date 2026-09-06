@@ -21,10 +21,8 @@ import { api } from '../../services/api';
 import { performCloudSync } from '../../services/sync';
 import { APP_COLORS } from '../../constants/theme';
 
-const GOOGLE_WEB_CLIENT_ID = '238664083379-64r2lft68p858gqrectk4uh1dhh0pbtc.apps.googleusercontent.com';
-
 GoogleSignin.configure({
-  webClientId: GOOGLE_WEB_CLIENT_ID,
+  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID!,
 });
 
 
