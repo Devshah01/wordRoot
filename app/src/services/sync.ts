@@ -244,10 +244,10 @@ export const triggerSync = async (
   }
 };
 
-export const initSyncListener = (isAuthenticated: boolean) => {
+export const initSyncListener = () => {
   return NetInfo.addEventListener((state) => {
     if (state.isConnected && state.isInternetReachable !== false) {
-      triggerSync(isAuthenticated);
+      triggerSync(useAppStore.getState().isAuthenticated);
     }
   });
 };

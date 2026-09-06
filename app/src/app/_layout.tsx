@@ -62,7 +62,6 @@ export default function RootLayout() {
   });
 
   const checkFirstLaunch = useAppStore(state => state.checkFirstLaunch);
-  const isAuthenticated = useAppStore(state => state.isAuthenticated);
   const isDarkMode = useAppStore(state => state.isDarkMode);
   const [isSplashAnimationComplete, setSplashAnimationComplete] = useState(false);
 
@@ -71,9 +70,9 @@ export default function RootLayout() {
 
   useEffect(() => {
     // Push pending sync queue when back online (logged-in users only)
-    const unsubscribe = initSyncListener(isAuthenticated);
+    const unsubscribe = initSyncListener();
     return () => unsubscribe();
-  }, [isAuthenticated]);
+  }, []);
 
   useEffect(() => {
     checkFirstLaunch();
