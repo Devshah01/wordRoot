@@ -213,29 +213,47 @@ export const triggerSync = async (
       return { success: true, queueEmpty: true };
     }
 
-    const payload = queue.map((item: any) => ({
-      ...item,
-      data: JSON.parse(item.data),
-    }));
+    const BATCH_SIZE = 50;
+    let totalSynced = 0;
+    let anyBatchFailed = false;
 
-    const response = await api.sync.push(payload);
+    for (let i = 0; i < queue.length; i += BATCH_SIZE) {
+      const chunk = queue.slice(i, i + BATCH_SIZE);
+      const payload = chunk.map((item: any) => ({
+        ...item,
+        data: JSON.parse(item.data),
+      }));
 
-    if (response && response.success) {
-      if (response.successIds && response.successIds.length > 0) {
-        await removeSyncQueueItems(response.successIds);
-        console.log(`Synced ${response.successIds.length}/${queue.length} items. Failed items will retry.`);
-      } else {
-        await clearSyncQueue();
-        console.log(`Successfully synced ${queue.length} offline items`);
+      try {
+        const response = await api.sync.push(payload);
+        if (response && response.success) {
+          if (response.successIds && response.successIds.length > 0) {
+            await removeSyncQueueItems(response.successIds);
+            totalSynced += response.successIds.length;
+          } else {
+            const chunkItemIds = chunk.map((c: any) => c.id);
+            await removeSyncQueueItems(chunkItemIds);
+            totalSynced += chunk.length;
+          }
+          await setSyncMetadata('last_push_at', new Date().toISOString());
+        } else {
+          anyBatchFailed = true;
+          break;
+        }
+      } catch (chunkErr) {
+        console.error(`Sync chunk failed (${i} to ${i + chunk.length}):`, chunkErr);
+        anyBatchFailed = true;
+        break;
       }
-      await setSyncMetadata('last_push_at', new Date().toISOString());
-      const remainingQueue = await getSyncQueue();
-      return {
-        success: true,
-        queueEmpty: remainingQueue.length === 0,
-      };
     }
-    return { success: false, queueEmpty: false };
+
+    const remainingQueue = await getSyncQueue();
+    console.log(`Synced ${totalSynced}/${queue.length} items. Remaining in queue: ${remainingQueue.length}`);
+
+    return {
+      success: !anyBatchFailed || totalSynced > 0,
+      queueEmpty: remainingQueue.length === 0,
+    };
   } catch (error) {
     console.error('Failed to sync offline queue', error);
     return { success: false, queueEmpty: false };
