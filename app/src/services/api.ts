@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { useAppStore } from '../store/useAppStore';
 
@@ -15,7 +16,8 @@ function getBaseUrl(): string {
     const ip = hostUri.split(':')[0];
     return `http://${ip}:8080`;
   }
-  return 'http://localhost:8080';
+
+  return 'https://wordroot-git-238664083379.europe-west1.run.app';
 }
 
 const BASE_URL = getBaseUrl();

@@ -22,7 +22,7 @@ import { performCloudSync } from '../../services/sync';
 import { APP_COLORS } from '../../constants/theme';
 
 GoogleSignin.configure({
-  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID!,
+  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '238664083379-64r2lft68p858gqrectk4uh1dhh0pbtc.apps.googleusercontent.com',
 });
 
 
@@ -128,11 +128,22 @@ export default function AuthScreen() {
     try {
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
       const userInfo = await GoogleSignin.signIn();
-      const idToken = userInfo.data?.idToken || (userInfo as any).idToken;
+      let idToken = userInfo.data?.idToken || (userInfo as any).idToken;
+
+      // Fallback: If idToken is not directly returned, attempt fetching tokens from Google Play Services
+      if (!idToken) {
+        try {
+          const tokens = await GoogleSignin.getTokens();
+          idToken = tokens?.idToken;
+        } catch (tokenErr) {
+          console.warn('GoogleSignin.getTokens fallback failed:', tokenErr);
+        }
+      }
+
       if (idToken) {
         handleGoogleToken(idToken);
       } else {
-        setErrorMsg('Google Sign-In failed: No ID token received.');
+        setErrorMsg('Google Sign-In failed: Web Client ID is missing or invalid in your configuration.');
       }
     } catch (error: any) {
       if (error.code === statusCodes.SIGN_IN_CANCELLED) {
