@@ -14,7 +14,7 @@ import AnimatedPressable from '../../components/AnimatedPressable';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, runOnJS } from 'react-native-reanimated';
-import { Settings, LogOut, X, ChevronRight, Trophy, Clock, Check, Cloud, RefreshCw, Smartphone, Trash2 } from 'lucide-react-native';
+import { Settings, LogOut, X, ChevronRight, Trophy, Clock, Check, Cloud, RefreshCw, Smartphone, Trash2, CheckCircle2 } from 'lucide-react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import AnalogClockPicker from '../../components/AnalogClockPicker';
 import { useAppStore } from '../../store/useAppStore';
@@ -282,9 +282,13 @@ export default function ProfileScreen() {
                     disabled={isSyncing}
                     style={[s.logoutBtn, { backgroundColor: COLORS.charcoal, borderColor: COLORS.charcoal, marginTop: 0, opacity: isSyncing ? 0.7 : 1 }]}
                   >
-                    <RefreshCw size={20} color={COLORS.bg} strokeWidth={2.5} />
+                    {lastSynced && !isSyncing ? (
+                      <CheckCircle2 size={20} color={COLORS.bg} strokeWidth={2.5} />
+                    ) : (
+                      <RefreshCw size={20} color={COLORS.bg} strokeWidth={2.5} />
+                    )}
                     <Text style={[s.logoutText, { color: COLORS.bg }]}>
-                      {isSyncing ? 'Syncing…' : 'Sync now'}
+                      {isSyncing ? 'Syncing…' : lastSynced ? 'Auto-sync active' : 'Sync now'}
                     </Text>
                   </AnimatedPressable>
                   <AnimatedPressable onPress={handleLogout} style={[s.logoutBtn, { backgroundColor: COLORS.card, borderColor: COLORS.bone, marginTop: 0 }]}>
