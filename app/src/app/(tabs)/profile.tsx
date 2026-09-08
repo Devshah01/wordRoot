@@ -14,13 +14,14 @@ import AnimatedPressable from '../../components/AnimatedPressable';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, runOnJS } from 'react-native-reanimated';
-import { Settings, LogOut, X, ChevronRight, Trophy, Clock, Check, Cloud, RefreshCw, Smartphone, Trash2, CheckCircle2 } from 'lucide-react-native';
+import { Settings, LogOut, X, ChevronRight, Trophy, Clock, Check, Cloud, RefreshCw, Smartphone, Trash2, CheckCircle2, UserX, AlertTriangle } from 'lucide-react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import AnalogClockPicker from '../../components/AnalogClockPicker';
 import { useAppStore } from '../../store/useAppStore';
 import { APP_COLORS } from '../../constants/theme';
 import { computeTotalReviews } from '../../services/localData';
 import { performCloudSync, getLastSyncLabel } from '../../services/sync';
+import { api } from '../../services/api';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 export default function ProfileScreen() {
@@ -49,6 +50,8 @@ export default function ProfileScreen() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isClearingData, setIsClearingData] = useState(false);
   const [isKeepingData, setIsKeepingData] = useState(false);
+  const [isConfirmingDeleteAccount, setIsConfirmingDeleteAccount] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const slideAnim = useSharedValue(-SCREEN_WIDTH);
   
   const [showTimePicker, setShowTimePicker] = useState(false);
@@ -117,6 +120,7 @@ export default function ProfileScreen() {
   };
 
   const handleLogout = () => {
+    setIsConfirmingDeleteAccount(false);
     setIsLogoutModalVisible(true);
   };
 
@@ -140,6 +144,24 @@ export default function ProfileScreen() {
     setIsLoggingOut(false);
     setIsClearingData(false);
     setIsKeepingData(false);
+    setIsLogoutModalVisible(false);
+  };
+
+  const executeDeleteAccount = async () => {
+    setIsDeletingAccount(true);
+    try {
+      await api.auth.deleteAccount();
+    } catch (err: any) {
+      console.warn('Account deletion server call failed', err);
+    }
+    try {
+      await GoogleSignin.signOut();
+    } catch {
+      // Not a Google user, ignore
+    }
+    await clearAuth(true);
+    setIsDeletingAccount(false);
+    setIsConfirmingDeleteAccount(false);
     setIsLogoutModalVisible(false);
   };
 
@@ -388,82 +410,150 @@ export default function ProfileScreen() {
           </Modal>
         )}
 
-        {/* ========== LOGOUT OPTIONS MODAL ========== */}
+        {/* ========== LOGOUT & DELETE ACCOUNT MODAL ========== */}
         {isLogoutModalVisible && (
           <Modal
             transparent={true}
             visible={isLogoutModalVisible}
             animationType="fade"
-            onRequestClose={() => !isLoggingOut && setIsLogoutModalVisible(false)}
+            onRequestClose={() => !isLoggingOut && !isDeletingAccount && setIsLogoutModalVisible(false)}
           >
             <View style={s.modalOverlayCenter}>
               <View style={[s.logoutDialogCard, { backgroundColor: COLORS.white, borderColor: COLORS.bone }]}>
-                <View style={s.logoutDialogHeader}>
-                  <Text style={[s.logoutDialogTitle, { color: COLORS.charcoal }]}>Log Out</Text>
-                  <AnimatedPressable disabled={isLoggingOut} onPress={() => setIsLogoutModalVisible(false)} style={s.logoutCloseBtn}>
-                    <X size={20} color={COLORS.warmgray} />
-                  </AnimatedPressable>
-                </View>
+                {isConfirmingDeleteAccount ? (
+                  /* Double-Confirmation Warning Step for Account Deletion */
+                  <>
+                    <View style={s.logoutDialogHeader}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <AlertTriangle size={22} color="#DC2626" />
+                        <Text style={[s.logoutDialogTitle, { color: '#DC2626' }]}>Delete Account & Data?</Text>
+                      </View>
+                      <AnimatedPressable disabled={isDeletingAccount} onPress={() => setIsConfirmingDeleteAccount(false)} style={s.logoutCloseBtn}>
+                        <X size={20} color={COLORS.warmgray} />
+                      </AnimatedPressable>
+                    </View>
 
-                <Text style={[s.logoutDialogSubtitle, { color: COLORS.warmgray }]}>
-                  Your vocabulary is safely backed up to your account. Choose what you want to do with the words stored on this device:
-                </Text>
+                    <Text style={[s.logoutDialogSubtitle, { color: isDarkMode ? '#FCA5A5' : '#7F1D1D', marginBottom: 20 }]}>
+                      Are you sure? This action is permanent and cannot be undone. All your vocabulary cards, study progress, and cloud backups will be permanently deleted from our servers.
+                    </Text>
 
-                {/* Option 1: Keep Words on Device */}
-                <AnimatedPressable
-                  disabled={isLoggingOut}
-                  onPress={() => executeLogout(false)}
-                  style={[s.logoutOptionCard, { backgroundColor: COLORS.card, borderColor: COLORS.bone }]}
-                  activeOpacity={0.7}
-                >
-                  <View style={[s.logoutOptionIcon, { backgroundColor: COLORS.bg }]}>
-                    {isKeepingData ? (
-                      <ActivityIndicator size="small" color={COLORS.charcoal} />
-                    ) : (
-                      <Smartphone size={22} color={COLORS.charcoal} strokeWidth={2} />
-                    )}
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[s.logoutOptionTitle, { color: COLORS.charcoal }]}>
-                      {isKeepingData ? 'Logging out…' : 'Keep Words on Device'}
-                    </Text>
-                    <Text style={[s.logoutOptionDesc, { color: COLORS.warmgray }]}>
-                      Log out and continue studying your words offline in guest mode.
-                    </Text>
-                  </View>
-                </AnimatedPressable>
+                    <AnimatedPressable
+                      disabled={isDeletingAccount}
+                      onPress={executeDeleteAccount}
+                      style={[s.logoutOptionCard, { backgroundColor: '#DC2626', borderColor: '#B91C1C', marginBottom: 12, justifyContent: 'center' }]}
+                      activeOpacity={0.8}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 4 }}>
+                        {isDeletingAccount ? (
+                          <ActivityIndicator size="small" color="#FFFFFF" />
+                        ) : (
+                          <UserX size={20} color="#FFFFFF" strokeWidth={2} />
+                        )}
+                        <Text style={{ fontFamily: 'Outfit_700Bold', fontSize: 15, color: '#FFFFFF' }}>
+                          {isDeletingAccount ? 'Deleting Account…' : 'Yes, Delete Account & Data'}
+                        </Text>
+                      </View>
+                    </AnimatedPressable>
 
-                {/* Option 2: Clear Words from Device */}
-                <AnimatedPressable
-                  disabled={isLoggingOut}
-                  onPress={() => executeLogout(true)}
-                  style={[s.logoutOptionCard, { backgroundColor: isDarkMode ? '#2B1515' : '#FEF2F2', borderColor: isDarkMode ? '#5C1D1D' : '#FECACA' }]}
-                  activeOpacity={0.7}
-                >
-                  <View style={[s.logoutOptionIcon, { backgroundColor: isDarkMode ? '#3D1B1B' : '#FEE2E2' }]}>
-                    {isClearingData ? (
-                      <ActivityIndicator size="small" color="#EF4444" />
-                    ) : (
-                      <Trash2 size={22} color="#EF4444" strokeWidth={2} />
-                    )}
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[s.logoutOptionTitle, { color: '#EF4444' }]}>
-                      {isClearingData ? 'Clearing data…' : 'Clear Words from Device'}
-                    </Text>
-                    <Text style={[s.logoutOptionDesc, { color: isDarkMode ? '#FCA5A5' : '#991B1B' }]}>
-                      Wipe local storage on this phone. Recommended for shared or public devices.
-                    </Text>
-                  </View>
-                </AnimatedPressable>
+                    <AnimatedPressable
+                      disabled={isDeletingAccount}
+                      onPress={() => setIsConfirmingDeleteAccount(false)}
+                      style={[s.cancelBtn, { borderColor: COLORS.bone, backgroundColor: COLORS.bg }]}
+                    >
+                      <Text style={[s.cancelBtnText, { color: COLORS.charcoal }]}>Cancel</Text>
+                    </AnimatedPressable>
+                  </>
+                ) : (
+                  /* Standard 3-Option Modal */
+                  <>
+                    <View style={s.logoutDialogHeader}>
+                      <Text style={[s.logoutDialogTitle, { color: COLORS.charcoal }]}>Log Out</Text>
+                      <AnimatedPressable disabled={isLoggingOut} onPress={() => setIsLogoutModalVisible(false)} style={s.logoutCloseBtn}>
+                        <X size={20} color={COLORS.warmgray} />
+                      </AnimatedPressable>
+                    </View>
 
-                <AnimatedPressable
-                  disabled={isLoggingOut}
-                  onPress={() => setIsLogoutModalVisible(false)}
-                  style={[s.cancelBtn, { borderColor: COLORS.bone, backgroundColor: COLORS.bg }]}
-                >
-                  <Text style={[s.cancelBtnText, { color: COLORS.charcoal }]}>Cancel</Text>
-                </AnimatedPressable>
+                    <Text style={[s.logoutDialogSubtitle, { color: COLORS.warmgray }]}>
+                      Choose an option for your account and local data stored on this device:
+                    </Text>
+
+                    {/* Option 1: Keep Words on Device */}
+                    <AnimatedPressable
+                      disabled={isLoggingOut}
+                      onPress={() => executeLogout(false)}
+                      style={[s.logoutOptionCard, { backgroundColor: COLORS.card, borderColor: COLORS.bone }]}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[s.logoutOptionIcon, { backgroundColor: COLORS.bg }]}>
+                        {isKeepingData ? (
+                          <ActivityIndicator size="small" color={COLORS.charcoal} />
+                        ) : (
+                          <Smartphone size={22} color={COLORS.charcoal} strokeWidth={2} />
+                        )}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[s.logoutOptionTitle, { color: COLORS.charcoal }]}>
+                          {isKeepingData ? 'Logging out…' : 'Keep Words on Device'}
+                        </Text>
+                        <Text style={[s.logoutOptionDesc, { color: COLORS.warmgray }]}>
+                          Log out and continue studying your words offline in guest mode.
+                        </Text>
+                      </View>
+                    </AnimatedPressable>
+
+                    {/* Option 2: Clear Words from Device */}
+                    <AnimatedPressable
+                      disabled={isLoggingOut}
+                      onPress={() => executeLogout(true)}
+                      style={[s.logoutOptionCard, { backgroundColor: COLORS.card, borderColor: COLORS.bone }]}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[s.logoutOptionIcon, { backgroundColor: COLORS.bg }]}>
+                        {isClearingData ? (
+                          <ActivityIndicator size="small" color={COLORS.charcoal} />
+                        ) : (
+                          <Trash2 size={22} color={COLORS.charcoal} strokeWidth={2} />
+                        )}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[s.logoutOptionTitle, { color: COLORS.charcoal }]}>
+                          {isClearingData ? 'Clearing data…' : 'Clear Words from Device'}
+                        </Text>
+                        <Text style={[s.logoutOptionDesc, { color: COLORS.warmgray }]}>
+                          Wipe local storage on this phone. Recommended for shared devices.
+                        </Text>
+                      </View>
+                    </AnimatedPressable>
+
+                    {/* Option 3: Delete Account & Data */}
+                    <AnimatedPressable
+                      disabled={isLoggingOut}
+                      onPress={() => setIsConfirmingDeleteAccount(true)}
+                      style={[s.logoutOptionCard, { backgroundColor: isDarkMode ? '#2B1515' : '#FEF2F2', borderColor: isDarkMode ? '#5C1D1D' : '#FECACA' }]}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[s.logoutOptionIcon, { backgroundColor: isDarkMode ? '#3D1B1B' : '#FEE2E2' }]}>
+                        <UserX size={22} color="#EF4444" strokeWidth={2} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[s.logoutOptionTitle, { color: '#EF4444' }]}>
+                          Delete Account & All Data
+                        </Text>
+                        <Text style={[s.logoutOptionDesc, { color: isDarkMode ? '#FCA5A5' : '#991B1B' }]}>
+                          Permanently delete your account, vocabulary, and backups from cloud servers.
+                        </Text>
+                      </View>
+                    </AnimatedPressable>
+
+                    <AnimatedPressable
+                      disabled={isLoggingOut}
+                      onPress={() => setIsLogoutModalVisible(false)}
+                      style={[s.cancelBtn, { borderColor: COLORS.bone, backgroundColor: COLORS.bg }]}
+                    >
+                      <Text style={[s.cancelBtnText, { color: COLORS.charcoal }]}>Cancel</Text>
+                    </AnimatedPressable>
+                  </>
+                )}
               </View>
             </View>
           </Modal>

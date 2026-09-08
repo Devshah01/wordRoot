@@ -36,10 +36,13 @@ const resetLimiter = rateLimit({
   },
 });
 
+const { authenticateToken } = require('../middleware/auth.middleware');
+
 router.post('/register', authLimiter, authController.register);
 router.post('/login', authLimiter, authController.login);
 router.post('/google', googleAuthLimiter, authController.googleAuth);
 router.post('/forgot-password', resetLimiter, authController.forgotPassword);
 router.post('/reset-password', resetLimiter, authController.resetPassword);
+router.delete('/account', authenticateToken, authController.deleteAccount);
 
 module.exports = router;

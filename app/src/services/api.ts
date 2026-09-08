@@ -73,6 +73,8 @@ export const api = {
       request('/api/auth/forgot-password', { method: 'POST', body: JSON.stringify(body) }),
     resetPassword: (body: { email: string; code: string; newPassword: string }) =>
       request('/api/auth/reset-password', { method: 'POST', body: JSON.stringify(body) }),
+    deleteAccount: () =>
+      request('/api/auth/account', { method: 'DELETE' }),
   },
 
   words: {
