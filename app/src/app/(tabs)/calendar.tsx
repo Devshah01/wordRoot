@@ -13,7 +13,7 @@ import { runOnJS } from 'react-native-reanimated';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
-import { ChevronLeft, ChevronRight, Trash2, Edit2, X, Search, BookOpen, ArrowLeft, Plus } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Trash2, Edit2, X, Search, BookOpen, ArrowLeft, Plus, AlertCircle } from 'lucide-react-native';
 import { useAppStore } from '../../store/useAppStore';
 import { APP_COLORS } from '../../constants/theme';
 import { formatLocalDateString } from '../../services/localData';
@@ -37,7 +37,8 @@ export default function CalendarScreen() {
 
   const COLORS = isDarkMode ? APP_COLORS.dark : APP_COLORS.light;
   const THEME_COLORS = useMemo(() => ({ ...COLORS, gridLine: isDarkMode ? '#2A2A2A' : '#EDEDEB' }), [COLORS, isDarkMode]);
-  const s = useMemo(() => getStyles(THEME_COLORS), [THEME_COLORS]);
+  const s = useMemo(() => getStyles(THEME_COLORS, isDarkMode), [THEME_COLORS, isDarkMode]);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [currentMonth, setCurrentMonth] = useState<number>(new Date().getMonth());
@@ -180,7 +181,7 @@ export default function CalendarScreen() {
     const seenWordsInBatch = new Set<string>();
     for (const item of allNormalizedEntries) {
       if (seenWordsInBatch.has(item.word)) {
-        alert(`"${item.word}" is listed more than once in your entries.`);
+        setErrorMessage(`"${item.word}" is listed more than once in your entries.`);
         return;
       }
       seenWordsInBatch.add(item.word);
@@ -194,7 +195,7 @@ export default function CalendarScreen() {
     );
 
     if (wordExists) {
-      alert('This word is already in your vocabulary.');
+      setErrorMessage('This word is already in your vocabulary.');
       return;
     }
 
@@ -246,20 +247,22 @@ export default function CalendarScreen() {
 
       setCalendarDrafts([{ word: '', meaning: '' }]);
       setCalendarEditedWords([]);
+      setErrorMessage(null);
       setIsEditorOpen(false);
       await loadLocalDatabase();
     } catch (err: any) {
-      alert(err.message || 'Failed to save words');
+      setErrorMessage(err.message || 'Failed to save words');
     }
   };
 
   const handleDeleteWord = async (word: any) => {
     try {
+      setErrorMessage(null);
       await deleteWord(word.id);
       await queueCloudChange(word.id, 'delete', {});
       setCalendarEditedWords(prev => prev.filter(w => w.id !== word.id));
       await loadLocalDatabase();
-    } catch (err: any) { alert(err.message || 'Failed to delete word'); }
+    } catch (err: any) { setErrorMessage(err.message || 'Failed to delete word'); }
   };
 
   const handleSwipeLeft = () => {
@@ -319,6 +322,7 @@ export default function CalendarScreen() {
     });
 
   const openEditor = () => {
+    setErrorMessage(null);
     const originalSelectedWords = allWords.filter((w) => {
       const dStr = formatLocalDateString(w.dateAdded || new Date());
       return dStr === selectedDateStr && !w.isDraft;
@@ -516,6 +520,12 @@ export default function CalendarScreen() {
                   </View>
 
               <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+                {errorMessage ? (
+                  <View style={s.errorBox}>
+                    <AlertCircle size={16} color={isDarkMode ? '#FCA5A5' : '#DC2626'} style={{ marginRight: 8 }} />
+                    <Text style={s.errorText}>{errorMessage}</Text>
+                  </View>
+                ) : null}
                 {calendarEditedWords.map((word, index) => (
                     <View key={`saved-${index}`} style={s.wordRow}>
                       <Text style={s.wordRowNum}>{index + 1}.</Text>
@@ -695,7 +705,23 @@ export default function CalendarScreen() {
   );
 }
 
-const getStyles = (COLORS: any) => StyleSheet.create({
+const getStyles = (COLORS: any, isDarkMode: boolean) => StyleSheet.create({
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: isDarkMode ? '#3B1818' : '#FEF2F2',
+    borderWidth: 1,
+    borderColor: isDarkMode ? '#7F1D1D' : '#FECACA',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+  },
+  errorText: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 13,
+    color: isDarkMode ? '#FCA5A5' : '#DC2626',
+    flex: 1,
+  },
   container: { flex: 1, backgroundColor: COLORS.bg },
   content: { flex: 1, paddingHorizontal: GRID_PADDING, paddingTop: 4 },
 

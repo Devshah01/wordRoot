@@ -16,7 +16,7 @@ import AnimatedPressable from '../../components/AnimatedPressable';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, runOnJS } from 'react-native-reanimated';
 import { router, useFocusEffect } from 'expo-router';
-import { Search, Bell, ArrowLeft, Plus, Library, BookPlus, Trash2, CheckCircle2, X, Sparkles } from 'lucide-react-native';
+import { Search, Bell, ArrowLeft, Plus, Library, BookPlus, Trash2, CheckCircle2, X, Sparkles, AlertCircle } from 'lucide-react-native';
 import { useAppStore } from '../../store/useAppStore';
 import { APP_COLORS } from '../../constants/theme';
 import {
@@ -52,7 +52,7 @@ export default function DashboardScreen() {
   } = useAppStore();
 
   const COLORS = isDarkMode ? APP_COLORS.dark : APP_COLORS.light;
-  const s = React.useMemo(() => getStyles(COLORS), [COLORS]);
+  const s = React.useMemo(() => getStyles(COLORS, isDarkMode), [COLORS, isDarkMode]);
 
   const bellAnim = useSharedValue(SCREEN_WIDTH);
   const animatedBellStyle = useAnimatedStyle(() => {
@@ -81,6 +81,7 @@ export default function DashboardScreen() {
   const [isVocabCardExpanded, setIsVocabCardExpanded] = useState(false);
   const [editedSavedWords, setEditedSavedWords] = useState<any[]>([]);
   const [currentDashboardDate, setCurrentDashboardDate] = useState<Date>(new Date());
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const [stats, setStats] = useState({
     totalWords: 0,
@@ -246,7 +247,7 @@ export default function DashboardScreen() {
     const seenWordsInBatch = new Set<string>();
     for (const item of allNormalizedEntries) {
       if (seenWordsInBatch.has(item.word)) {
-        alert(`"${item.word}" is listed more than once in your entries.`);
+        setErrorMessage(`"${item.word}" is listed more than once in your entries.`);
         return;
       }
       seenWordsInBatch.add(item.word);
@@ -260,7 +261,7 @@ export default function DashboardScreen() {
     );
 
     if (wordExists) {
-      alert('This word is already in your vocabulary.');
+      setErrorMessage('This word is already in your vocabulary.');
       return;
     }
 
@@ -315,26 +316,29 @@ export default function DashboardScreen() {
 
       setVocabLines(Array(5).fill(null).map(() => ({ word: '', meaning: '' })));
       setEditedSavedWords([]);
+      setErrorMessage(null);
       setIsVocabCardExpanded(false);
       setIsTabBarHidden(false);
       await fetchDashboardData();
     } catch (err: any) {
-      alert(err.message || 'Failed to save words');
+      setErrorMessage(err.message || 'Failed to save words');
     }
   };
 
   const handleDeleteSavedWord = async (wordObj: any) => {
     try {
+      setErrorMessage(null);
       await deleteWord(wordObj.id);
       await queueCloudChange(wordObj.id, 'delete', {});
       setEditedSavedWords(prev => prev.filter(w => w.id !== wordObj.id));
       await fetchDashboardData();
     } catch (e: any) {
-      alert(e.message || 'Failed to delete word');
+      setErrorMessage(e.message || 'Failed to delete word');
     }
   };
 
   const handleToggleExpand = () => {
+    setErrorMessage(null);
     const nextState = !isVocabCardExpanded;
     setIsVocabCardExpanded(nextState);
     setIsTabBarHidden(nextState);
@@ -528,6 +532,12 @@ export default function DashboardScreen() {
               </View>
 
               <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+                {errorMessage ? (
+                  <View style={s.errorBox}>
+                    <AlertCircle size={16} color={isDarkMode ? '#FCA5A5' : '#DC2626'} style={{ marginRight: 8 }} />
+                    <Text style={s.errorText}>{errorMessage}</Text>
+                  </View>
+                ) : null}
                 {editedSavedWords.map((word, index) => (
                   <View key={`saved-${index}`} style={s.wordRow}>
                     <Text style={s.wordRowNum}>{index + 1}.</Text>
@@ -683,9 +693,25 @@ export default function DashboardScreen() {
   );
 }
 
-const getStyles = (COLORS: any) => StyleSheet.create({
+const getStyles = (COLORS: any, isDarkMode: boolean) => StyleSheet.create({
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: isDarkMode ? '#3B1818' : '#FEF2F2',
+    borderWidth: 1,
+    borderColor: isDarkMode ? '#7F1D1D' : '#FECACA',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+  },
+  errorText: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 13,
+    color: isDarkMode ? '#FCA5A5' : '#DC2626',
+    flex: 1,
+  },
   container: { flex: 1, backgroundColor: COLORS.bg },
-  content: { flex: 1, paddingHorizontal: 20, paddingTop: 12 }, // Reduced top padding
+  content: { flex: 1, paddingHorizontal: 20, paddingTop: 12 }, 
 
   // Header — two-line layout
   header: {
