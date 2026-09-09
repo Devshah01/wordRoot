@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -25,11 +25,21 @@ export default function OnboardingScreen() {
   const [name, setName] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  const scrollToBottom = () => {
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 80);
+  };
 
   useEffect(() => {
     const showSub = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      () => setIsKeyboardVisible(true)
+      () => {
+        setIsKeyboardVisible(true);
+        scrollToBottom();
+      }
     );
     const hideSub = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
@@ -51,17 +61,20 @@ export default function OnboardingScreen() {
     router.replace('/(tabs)/dashboard');
   };
 
+  const activeKeyboardState = isKeyboardVisible || isFocused;
+
   return (
     <SafeAreaView style={s.container} edges={['top', 'bottom']}>
       <KeyboardAvoidingView
         style={s.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 10}
       >
         <ScrollView
+          ref={scrollViewRef}
           contentContainerStyle={[
             s.scrollContent,
-            (isKeyboardVisible || isFocused) && s.scrollContentKeyboard,
+            activeKeyboardState && s.scrollContentKeyboard,
             {
               paddingBottom: Math.max(insets.bottom, 16) + 16,
             },
@@ -71,15 +84,17 @@ export default function OnboardingScreen() {
           automaticallyAdjustKeyboardInsets={true}
         >
           {/* Top Brand Header */}
-          <View style={[s.headerSection, (isKeyboardVisible || isFocused) && s.headerSectionKeyboard]}>
-            <View style={s.brandBadge}>
-              <Sparkles size={24} color={COLORS.charcoal} strokeWidth={2} />
+          <View style={[s.headerSection, activeKeyboardState && s.headerSectionKeyboard]}>
+            <View style={[s.brandBadge, activeKeyboardState && s.brandBadgeKeyboard]}>
+              <Sparkles size={activeKeyboardState ? 18 : 24} color={COLORS.charcoal} strokeWidth={2} />
             </View>
-            <Text style={s.eyebrow}>WELCOME TO WORDROOT</Text>
-            <Text style={s.title}>What should we{'\n'}call you?</Text>
-            <Text style={s.subtitle}>
-              Personalize your daily vocabulary journey. You can change this anytime in your profile.
-            </Text>
+            <Text style={[s.eyebrow, activeKeyboardState && s.eyebrowKeyboard]}>WELCOME TO WORDROOT</Text>
+            <Text style={[s.title, activeKeyboardState && s.titleKeyboard]}>What should we call you?</Text>
+            {!activeKeyboardState && (
+              <Text style={s.subtitle}>
+                Personalize your daily vocabulary journey. You can change this anytime in your profile.
+              </Text>
+            )}
           </View>
 
           {/* Main Card */}
@@ -98,7 +113,10 @@ export default function OnboardingScreen() {
                 placeholderTextColor={placeholderColor}
                 value={name}
                 onChangeText={setName}
-                onFocus={() => setIsFocused(true)}
+                onFocus={() => {
+                  setIsFocused(true);
+                  scrollToBottom();
+                }}
                 onBlur={() => setIsFocused(false)}
                 autoFocus
                 returnKeyType="done"
@@ -149,7 +167,7 @@ const getStyles = (COLORS: any, isDarkMode: boolean) =>
     },
     scrollContentKeyboard: {
       justifyContent: 'flex-start',
-      paddingTop: 12,
+      paddingTop: 8,
     },
 
     // Header Section
@@ -157,7 +175,7 @@ const getStyles = (COLORS: any, isDarkMode: boolean) =>
       marginBottom: 24,
     },
     headerSectionKeyboard: {
-      marginBottom: 14,
+      marginBottom: 10,
     },
     brandBadge: {
       width: 52,
@@ -170,6 +188,12 @@ const getStyles = (COLORS: any, isDarkMode: boolean) =>
       alignItems: 'center',
       marginBottom: 20,
     },
+    brandBadgeKeyboard: {
+      width: 38,
+      height: 38,
+      borderRadius: 12,
+      marginBottom: 8,
+    },
     eyebrow: {
       fontFamily: 'Inter_600SemiBold',
       fontSize: 12,
@@ -178,12 +202,21 @@ const getStyles = (COLORS: any, isDarkMode: boolean) =>
       textTransform: 'uppercase',
       marginBottom: 8,
     },
+    eyebrowKeyboard: {
+      fontSize: 10,
+      marginBottom: 4,
+    },
     title: {
       fontFamily: 'Outfit_700Bold',
       fontSize: 32,
       color: COLORS.charcoal,
       lineHeight: 40,
       marginBottom: 10,
+    },
+    titleKeyboard: {
+      fontSize: 22,
+      lineHeight: 28,
+      marginBottom: 0,
     },
     subtitle: {
       fontFamily: 'Inter_400Regular',
