@@ -121,12 +121,14 @@ export default function ForgotPasswordScreen() {
     <SafeAreaView style={s.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         style={s.keyboardView}
       >
         <ScrollView
           contentContainerStyle={s.scrollContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          automaticallyAdjustKeyboardInsets={true}
         >
           <AnimatedPressable
             onPress={() => {
@@ -325,8 +327,9 @@ const getStyles = (COLORS: any, isDarkMode: boolean) =>
     scrollContent: {
       flexGrow: 1,
       paddingHorizontal: 24,
-      paddingVertical: 16,
-      justifyContent: 'center',
+      paddingTop: 24,
+      paddingBottom: 32,
+      justifyContent: 'flex-start',
     },
     backBtn: {
       width: 40,

@@ -1,5 +1,4 @@
-/* eslint-disable react/no-unescaped-entities */
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,6 +7,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Keyboard,
 } from 'react-native';
 import AnimatedPressable from '../components/AnimatedPressable';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -24,6 +24,23 @@ export default function OnboardingScreen() {
 
   const [name, setName] = useState('');
   const [isFocused, setIsFocused] = useState(false);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => setIsKeyboardVisible(true)
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setIsKeyboardVisible(false)
+    );
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const placeholderColor = isDarkMode ? '#666666' : '#B8B4AE';
 
@@ -38,21 +55,23 @@ export default function OnboardingScreen() {
     <SafeAreaView style={s.container} edges={['top', 'bottom']}>
       <KeyboardAvoidingView
         style={s.keyboardView}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
         <ScrollView
           contentContainerStyle={[
             s.scrollContent,
+            (isKeyboardVisible || isFocused) && s.scrollContentKeyboard,
             {
-              paddingTop: Math.max(insets.top, 16) + 12,
-              paddingBottom: Math.max(insets.bottom, 20) + 16,
+              paddingBottom: Math.max(insets.bottom, 16) + 16,
             },
           ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          automaticallyAdjustKeyboardInsets={true}
         >
           {/* Top Brand Header */}
-          <View style={s.headerSection}>
+          <View style={[s.headerSection, (isKeyboardVisible || isFocused) && s.headerSectionKeyboard]}>
             <View style={s.brandBadge}>
               <Sparkles size={24} color={COLORS.charcoal} strokeWidth={2} />
             </View>
@@ -125,12 +144,20 @@ const getStyles = (COLORS: any, isDarkMode: boolean) =>
     scrollContent: {
       flexGrow: 1,
       paddingHorizontal: 24,
+      paddingTop: 16,
       justifyContent: 'center',
+    },
+    scrollContentKeyboard: {
+      justifyContent: 'flex-start',
+      paddingTop: 12,
     },
 
     // Header Section
     headerSection: {
       marginBottom: 24,
+    },
+    headerSectionKeyboard: {
+      marginBottom: 14,
     },
     brandBadge: {
       width: 52,
