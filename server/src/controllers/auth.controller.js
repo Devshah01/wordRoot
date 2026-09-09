@@ -380,13 +380,18 @@ async function deleteAccount(req, res) {
       return res.status(404).json({ error: 'User account not found' });
     }
 
-    // Delete associated words, password reset codes, and the user record
-    await prisma.word.deleteMany({ where: { userId } });
-    await prisma.passwordReset.deleteMany({ where: { email: user.email } });
-    await prisma.user.delete({ where: { id: userId } });
+    // Atomically delete associated words, password reset codes, and the user record
+    await prisma.$transaction([
+      prisma.word.deleteMany({ where: { userId } }),
+      prisma.passwordReset.deleteMany({ where: { email: user.email } }),
+      prisma.user.delete({ where: { id: userId } }),
+    ]);
 
     console.log(`[auth] Account deleted successfully for userId: ${userId} (${user.email})`);
-    res.json({ message: 'Account and all associated data deleted successfully' });
+    res.json({
+      message: 'Account and all associated data deleted successfully',
+      loggedOut: true,
+    });
   } catch (error) {
     console.error('Delete account error:', error);
     res.status(500).json({ error: 'Failed to delete account. Please try again.' });
