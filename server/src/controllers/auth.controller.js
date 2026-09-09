@@ -187,12 +187,16 @@ async function googleAuth(req, res) {
         });
       } catch (upsertErr) {
         if (upsertErr && upsertErr.code === 'P2002') {
-          // Handled concurrent signup/link race condition: refetch user
-          user = await prisma.user.findFirst({
-            where: {
-              OR: [{ googleId }, { email }],
-            },
-          });
+          // Handled concurrent signup/link race condition: refetch user with retries
+          for (let attempt = 0; attempt < 3; attempt++) {
+            user = await prisma.user.findFirst({
+              where: {
+                OR: [{ googleId }, { email }],
+              },
+            });
+            if (user) break;
+            await new Promise((resolve) => setTimeout(resolve, 50 * (attempt + 1)));
+          }
         } else {
           throw upsertErr;
         }
