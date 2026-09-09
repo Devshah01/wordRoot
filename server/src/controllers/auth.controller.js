@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
@@ -234,8 +235,8 @@ async function forgotPassword(req, res) {
       return res.json({ message: 'If this email is registered, a reset code has been generated.' });
     }
 
-    // Generate a 6-digit code
-    const code = String(Math.floor(100000 + Math.random() * 900000));
+    // Generate a 6-digit code using cryptographically secure PRNG
+    const code = String(crypto.randomInt(100000, 1000000));
     const codeHash = await bcrypt.hash(code, 10);
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
