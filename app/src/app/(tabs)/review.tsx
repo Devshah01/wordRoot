@@ -478,12 +478,12 @@ export default function ReviewScreen() {
                           {isMeaningToWord ? (
                             <>
                               <Text style={s.cardWord}>{card.word}</Text>
-                              <Text style={[s.cardMeaning, { marginTop: 12 }]}>{card.meaning}</Text>
+                              <Text style={s.cardMeaningSubText}>{card.meaning}</Text>
                             </>
                           ) : (
                             <>
                               <Text style={s.cardMeaning}>{card.meaning}</Text>
-                              <Text style={[s.cardHint, { marginTop: 12 }]}>{card.word}</Text>
+                              <Text style={s.cardWordSubText}>{card.word}</Text>
                             </>
                           )}
                         </ScrollView>
@@ -941,28 +941,44 @@ const getStyles = (COLORS: any) =>
     },
     cardWord: {
       fontFamily: 'Outfit_700Bold',
-      fontSize: 32,
+      fontSize: 30,
       color: COLORS.charcoal,
       textTransform: 'capitalize',
       textAlign: 'center',
     },
+    cardWordSubText: {
+      fontFamily: 'Outfit_600SemiBold',
+      fontSize: 16,
+      color: COLORS.warmgray,
+      textAlign: 'center',
+      textTransform: 'capitalize',
+      marginTop: 12,
+    },
     cardMeaning: {
-      fontFamily: 'Outfit_700Bold',
-      fontSize: 24,
+      fontFamily: 'Inter_400Regular',
+      fontSize: 19,
       color: COLORS.charcoal,
       textAlign: 'center',
-      lineHeight: 32,
+      lineHeight: 27,
+    },
+    cardMeaningSubText: {
+      fontFamily: 'Inter_400Regular',
+      fontSize: 15,
+      color: COLORS.warmgray,
+      textAlign: 'center',
+      lineHeight: 22,
+      marginTop: 12,
     },
     cardPromptMeaning: {
-      fontFamily: 'Outfit_600SemiBold',
-      fontSize: 21,
-      lineHeight: 30,
+      fontFamily: 'Inter_400Regular',
+      fontSize: 20,
+      lineHeight: 28,
       color: COLORS.charcoal,
       textAlign: 'center',
       paddingHorizontal: 8,
     },
     cardPromptMeaningStack: {
-      fontFamily: 'Outfit_600SemiBold',
+      fontFamily: 'Inter_400Regular',
       fontSize: 15,
       lineHeight: 20,
       color: COLORS.charcoal,
