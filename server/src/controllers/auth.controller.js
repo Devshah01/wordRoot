@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 const prisma = require('../services/db.service');
-const { jwtSecret } = require('../middleware/auth.middleware');
+const { getJwtSecret } = require('../middleware/auth.middleware');
 const nodemailer = require('nodemailer');
 
 const GOOGLE_WEB_CLIENT_ID = process.env.GOOGLE_WEB_CLIENT_ID;
@@ -37,7 +37,7 @@ const transporter = nodemailer.createTransport({
 
 // Helper to sign JWT
 function generateToken(user) {
-  return jwt.sign({ id: user.id, email: user.email }, jwtSecret, { expiresIn: '30d' });
+  return jwt.sign({ id: user.id, email: user.email }, getJwtSecret(), { expiresIn: '30d' });
 }
 
 // 1. Manual Signup
