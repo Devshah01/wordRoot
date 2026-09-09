@@ -4,25 +4,60 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Privacy Policy - WordRoot</title>
-  <meta name="description" content="Privacy Policy for WordRoot - Vocabulary Learning and Spaced Repetition application." />
+  <meta name="description" content="Official Privacy Policy for WordRoot - Vocabulary Learning & Spaced Repetition Application." />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-primary: #f8fafc;
-      --card-bg: #ffffff;
-      --text-main: #0f172a;
-      --text-muted: #475569;
-      --text-subtle: #64748b;
-      --border-color: #e2e8f0;
-      --accent: #2563eb;
-      --accent-light: #eff6ff;
-      --accent-dark: #1d4ed8;
-      --tag-bg: #e0f2fe;
-      --tag-text: #0369a1;
-      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-      --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.07);
+      --bg: #FBFBFA;
+      --card: #FFFFFF;
+      --charcoal: #1A1A1A;
+      --warmgray: #7D7975;
+      --bone: #E6E4E0;
+      --lightgray: #F0EFED;
+      --accent-red: #EF4444;
+      --accent-red-bg: #FEF2F2;
+      --accent-red-border: #FECACA;
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #121212;
+        --card: #1E1E1E;
+        --charcoal: #FBFBFA;
+        --warmgray: #A3A3A3;
+        --bone: #333333;
+        --lightgray: #2C2C2C;
+        --accent-red-bg: #2B1515;
+        --accent-red-border: #5C1D1D;
+        --shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      }
+    }
+
+    body.dark-mode {
+      --bg: #121212;
+      --card: #1E1E1E;
+      --charcoal: #FBFBFA;
+      --warmgray: #A3A3A3;
+      --bone: #333333;
+      --lightgray: #2C2C2C;
+      --accent-red-bg: #2B1515;
+      --accent-red-border: #5C1D1D;
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    body.light-mode {
+      --bg: #FBFBFA;
+      --card: #FFFFFF;
+      --charcoal: #1A1A1A;
+      --warmgray: #7D7975;
+      --bone: #E6E4E0;
+      --lightgray: #F0EFED;
+      --accent-red-bg: #FEF2F2;
+      --accent-red-border: #FECACA;
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
     }
 
     * {
@@ -32,66 +67,99 @@
     }
 
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background-color: var(--bg-primary);
-      color: var(--text-main);
-      line-height: 1.7;
-      padding: 40px 20px;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg);
+      color: var(--charcoal);
+      line-height: 1.65;
+      padding: 40px 16px;
+      transition: background-color 0.3s ease, color 0.3s ease;
     }
 
-    .container {
-      max-width: 820px;
+    .wrapper {
+      max-width: 800px;
       margin: 0 auto;
-      background: var(--card-bg);
-      border-radius: 16px;
-      padding: 48px;
-      box-shadow: var(--shadow-md);
-      border: 1px solid var(--border-color);
     }
 
-    @media (max-width: 640px) {
-      body {
-        padding: 16px 12px;
-      }
-      .container {
-        padding: 24px 20px;
-        border-radius: 12px;
-      }
-    }
-
-    header {
-      border-bottom: 1px solid var(--border-color);
-      padding-bottom: 28px;
-      margin-bottom: 36px;
-    }
-
-    .app-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background-color: var(--tag-bg);
-      color: var(--tag-text);
-      font-size: 0.85rem;
-      font-weight: 600;
-      padding: 6px 14px;
-      border-radius: 9999px;
+    .theme-toggle-bar {
+      display: flex;
+      justify-content: flex-end;
       margin-bottom: 16px;
     }
 
-    h1 {
-      font-size: 2.25rem;
-      font-weight: 700;
-      color: var(--text-main);
-      letter-spacing: -0.025em;
-      margin-bottom: 10px;
+    .theme-btn {
+      background: var(--card);
+      border: 1px solid var(--bone);
+      color: var(--charcoal);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
     }
 
-    .meta-info {
+    .theme-btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .container {
+      background: var(--card);
+      border-radius: 24px;
+      padding: 48px;
+      border: 1px solid var(--bone);
+      box-shadow: var(--shadow);
+    }
+
+    @media (max-width: 640px) {
+      body { padding: 16px 8px; }
+      .container { padding: 24px 20px; border-radius: 18px; }
+    }
+
+    header {
+      border-bottom: 1px solid var(--bone);
+      padding-bottom: 24px;
+      margin-bottom: 32px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--lightgray);
+      color: var(--charcoal);
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 16px;
+      margin-bottom: 16px;
+    }
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 3px;
+      background-color: var(--charcoal);
+    }
+
+    h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: var(--charcoal);
+      margin-bottom: 8px;
+      letter-spacing: -0.02em;
+    }
+
+    .meta {
       display: flex;
       flex-wrap: wrap;
-      gap: 16px;
-      color: var(--text-subtle);
-      font-size: 0.9rem;
+      gap: 12px;
+      color: var(--warmgray);
+      font-size: 0.875rem;
     }
 
     section {
@@ -99,210 +167,221 @@
     }
 
     h2 {
-      font-size: 1.35rem;
-      font-weight: 600;
-      color: var(--text-main);
-      margin-bottom: 14px;
-      letter-spacing: -0.015em;
-      display: flex;
-      align-items: center;
-      gap: 8px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--charcoal);
+      margin-bottom: 12px;
+      letter-spacing: -0.01em;
     }
 
     p {
-      color: var(--text-muted);
-      margin-bottom: 14px;
-      font-size: 0.975rem;
+      color: var(--warmgray);
+      font-size: 0.95rem;
+      margin-bottom: 12px;
     }
 
-    ul, ol {
-      margin-left: 24px;
+    ul {
+      margin-left: 20px;
       margin-bottom: 16px;
-      color: var(--text-muted);
-      font-size: 0.975rem;
+      color: var(--warmgray);
+      font-size: 0.95rem;
     }
 
     li {
       margin-bottom: 8px;
     }
 
-    li strong {
-      color: var(--text-main);
+    li strong, p strong {
+      color: var(--charcoal);
     }
 
-    .highlight-box {
-      background-color: var(--accent-light);
-      border-left: 4px solid var(--accent);
-      padding: 16px 20px;
-      border-radius: 8px;
+    .callout {
+      background-color: var(--lightgray);
+      border-left: 4px solid var(--charcoal);
+      padding: 18px 20px;
+      border-radius: 12px;
       margin: 20px 0;
     }
 
-    .highlight-box p {
-      color: #1e3a8a;
+    .callout p {
+      color: var(--charcoal);
       margin: 0;
-      font-size: 0.925rem;
+      font-size: 0.9rem;
     }
 
-    .contact-box {
-      background-color: #f1f5f9;
-      border-radius: 12px;
-      padding: 24px;
-      margin-top: 16px;
-      border: 1px solid var(--border-color);
+    .deletion-box {
+      background-color: var(--accent-red-bg);
+      border: 1px solid var(--accent-red-border);
+      padding: 20px;
+      border-radius: 16px;
+      margin: 20px 0;
     }
 
-    .contact-box p {
-      margin-bottom: 6px;
+    .deletion-box h3 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.05rem;
+      color: var(--accent-red);
+      margin-bottom: 8px;
+    }
+
+    .deletion-box p {
+      color: var(--charcoal);
+      font-size: 0.9rem;
+      margin: 0;
     }
 
     a {
-      color: var(--accent);
-      text-decoration: none;
-      font-weight: 500;
+      color: var(--charcoal);
+      font-weight: 600;
+      text-decoration: underline;
     }
 
     a:hover {
-      text-decoration: underline;
-      color: var(--accent-dark);
+      opacity: 0.8;
     }
 
     footer {
-      margin-top: 48px;
-      padding-top: 24px;
-      border-top: 1px solid var(--border-color);
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid var(--bone);
       text-align: center;
       font-size: 0.85rem;
-      color: var(--text-subtle);
+      color: var(--warmgray);
     }
   </style>
 </head>
 <body>
-  <main class="container">
-    <header>
-      <div class="app-badge">
-        <span>●</span> Official Privacy Document
-      </div>
-      <h1>Privacy Policy for WordRoot</h1>
-      <div class="meta-info">
-        <span><strong>Application:</strong> WordRoot</span>
-        <span>•</span>
-        <span><strong>Effective Date:</strong> September 2, 2026</span>
-        <span>•</span>
-        <span><strong>Package ID:</strong> com.wordroot.app</span>
-      </div>
-    </header>
+  <div class="wrapper">
+    <div class="theme-toggle-bar">
+      <button class="theme-btn" id="themeToggleBtn" onclick="toggleTheme()">
+        <span>🌙 / ☀️ Toggle Theme</span>
+      </button>
+    </div>
 
-    <section>
-      <p>
-        Welcome to <strong>WordRoot</strong> ("we," "our," or "the App"). We are committed to protecting your privacy and ensuring your personal information is handled safely and responsibly. 
-      </p>
-      <p>
-        This Privacy Policy explains what information we collect, how it is used, and what rights you have regarding your data when you use the WordRoot mobile application and related services.
-      </p>
-    </section>
+    <main class="container">
+      <header>
+        <div class="badge">
+          <div class="badge-dot"></div>
+          Official Privacy Policy
+        </div>
+        <h1>Privacy Policy for WordRoot</h1>
+        <div class="meta">
+          <span><strong>App:</strong> WordRoot</span>
+          <span>•</span>
+          <span><strong>Effective Date:</strong> September 9, 2026</span>
+          <span>•</span>
+          <span><strong>Package:</strong> com.wordroot.app</span>
+        </div>
+      </header>
 
-    <section>
-      <h2>1. Information We Collect</h2>
-      <p>We collect information to provide, personalize, and synchronize your vocabulary learning experience:</p>
-      <ul>
-        <li>
-          <strong>Account Information:</strong> When you create an account, log in, or authenticate with Google Sign-In, we collect your email address and display name.
-        </li>
-        <li>
-          <strong>Learning Progress & Study Data:</strong> WordRoot tracks your vocabulary cards, study sessions, spaced repetition schedules (FSRS algorithm data), review logs, and progress history.
-        </li>
-        <li>
-          <strong>Technical & Device Data:</strong> Minimal diagnostic information (such as app version, device model, and operating system version) may be processed strictly for troubleshooting, crash resolution, and reliable server synchronization.
-        </li>
-      </ul>
-    </section>
-
-    <section>
-      <h2>2. How We Use Your Information</h2>
-      <p>We use the data we collect solely for the following legitimate purposes:</p>
-      <ul>
-        <li>To provide and maintain your core vocabulary study tools and spaced repetition flashcards.</li>
-        <li>To synchronize your learning progress and review schedules across devices securely.</li>
-        <li>To authenticate your identity and safeguard your account against unauthorized access.</li>
-        <li>To deliver optional local study reminders and revision notifications that you set up.</li>
-        <li>We <strong>do not</strong> sell, rent, or trade your personal data to any third-party advertisers or data brokers.</li>
-      </ul>
-    </section>
-
-    <section>
-      <h2>3. Device Permissions Used by the App</h2>
-      <p>WordRoot requests only the necessary permissions required to enable specific features:</p>
-      <ul>
-        <li>
-          <strong>Notifications (<code>POST_NOTIFICATIONS</code>):</strong> Used exclusively to deliver study reminders, streak alerts, and spaced repetition review prompts configured by you. You can turn this off at any time in device settings.
-        </li>
-        <li>
-          <strong>Exact Alarms (<code>SCHEDULE_EXACT_ALARM</code> / <code>RECEIVE_BOOT_COMPLETED</code>):</strong> Used to schedule timely notifications and review intervals accurately even after device restarts.
-        </li>
-        <li>
-          <strong>Audio:</strong> Used strictly for local word audio pronunciation playback. The app does not record or collect audio.
-        </li>
-      </ul>
-    </section>
-
-    <section>
-      <h2>4. Data Storage and Third-Party Services</h2>
-      <p>Your data is managed with high security standards:</p>
-      <ul>
-        <li>
-          <strong>Local Storage (SQLite):</strong> Your flashcards and study history are stored locally on your device using an encrypted/isolated SQLite database to provide offline learning support.
-        </li>
-        <li>
-          <strong>Google Authentication:</strong> If you choose to sign in using Google, Google's identity service processes your sign-in credentials in accordance with <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Google's Privacy Policy</a>.
-        </li>
-        <li>
-          <strong>Encryption in Transit:</strong> All communications between the mobile application and our backend servers are encrypted using industry-standard TLS / HTTPS protocols.
-        </li>
-      </ul>
-    </section>
-
-    <section>
-      <h2>5. User Rights & Data Deletion (Google Play Requirement)</h2>
-      <p>
-        You have complete control over your personal data and account:
-      </p>
-      <div class="highlight-box">
+      <section>
         <p>
-          <strong>How to request data or account deletion:</strong><br>
-          If you wish to delete your WordRoot account and permanently remove all associated study history, vocabulary progress, and personal details from our servers, simply send an email to <a href="mailto:wordroot.app@gmail.com">wordroot.app@gmail.com</a> with the subject <em>"Delete WordRoot Account"</em> from your registered email address. We will permanently delete your account and all associated server records within 30 days.
+          Welcome to <strong>WordRoot</strong> ("we," "our," or "the App"). WordRoot is a vocabulary learning application designed to help users build language mastery using spaced repetition and personal study cards.
         </p>
-      </div>
-      <p>You can also clear local data stored on your device at any time by uninstalling the application or clearing the app storage in your Android system settings.</p>
-    </section>
+        <p>
+          We take your privacy seriously. This Privacy Policy outlines what information we collect, how your data is processed, how cloud synchronization operates, and how you can manage or permanently delete your account data.
+        </p>
+      </section>
 
-    <section>
-      <h2>6. Children’s Privacy</h2>
-      <p>
-        WordRoot is an educational vocabulary learning application and is not intended for or directed toward children under the age of 13. We do not knowingly collect personal information from children under 13. If you believe a child has provided us with personal information without parental consent, please contact us immediately, and we will delete such data promptly.
-      </p>
-    </section>
+      <section>
+        <h2>1. Information We Collect</h2>
+        <p>WordRoot processes minimal data necessary to deliver account synchronization and study progress tracking:</p>
+        <ul>
+          <li>
+            <strong>Account Credentials:</strong> When registering or logging in (via email/password or Google Sign-In), we store your email address, display name, and securely hashed passwords (using industry-standard bcrypt).
+          </li>
+          <li>
+            <strong>Vocabulary & Study Records:</strong> Your custom words, meanings, study schedules, card review timestamps, review counts, and FSRS spaced repetition parameters.
+          </li>
+          <li>
+            <strong>Local App Settings:</strong> Theme preferences (Light/Dark mode) and notification time preferences.
+          </li>
+        </ul>
+      </section>
 
-    <section>
-      <h2>7. Changes to This Privacy Policy</h2>
-      <p>
-        We may update this Privacy Policy from time to time to reflect changes in our practices or applicable legal requirements. The updated policy will be posted on this page with an updated "Effective Date". We encourage you to review this page periodically.
-      </p>
-    </section>
+      <section>
+        <h2>2. Data Storage & Architecture</h2>
+        <p>WordRoot is built with an offline-first architecture to safeguard performance and availability:</p>
+        <ul>
+          <li>
+            <strong>Local Storage (SQLite):</strong> Your flashcards and daily study progress are stored locally on your mobile device in an isolated SQLite database. This allows full offline functionality.
+          </li>
+          <li>
+            <strong>Cloud Synchronization (Backend API & PostgreSQL):</strong> When connected to the internet, local SQLite updates sync securely with our backend server over encrypted TLS / HTTPS connections.
+          </li>
+          <li>
+            <strong>No Third-Party Data Sales:</strong> We <strong>do not sell, rent, monetize, or share</strong> your personal data or vocabulary cards with third-party advertisers or data brokers.
+          </li>
+        </ul>
+      </section>
 
-    <section>
-      <h2>8. Contact Us</h2>
-      <p>If you have any questions, concerns, or requests regarding this Privacy Policy or your data, please contact us:</p>
-      <div class="contact-box">
-        <p><strong>Developer:</strong> Dev Shah (WordRoot)</p>
-        <p><strong>Email:</strong> <a href="mailto:wordroot.app@gmail.com">wordroot.app@gmail.com</a></p>
-        <p><strong>Application:</strong> WordRoot (com.wordroot.app)</p>
-      </div>
-    </section>
+      <section>
+        <h2>3. Device Permissions Used</h2>
+        <p>WordRoot requests only essential Android/iOS permissions required for core features:</p>
+        <ul>
+          <li>
+            <strong>Notifications (<code>POST_NOTIFICATIONS</code>):</strong> Used strictly to trigger daily review reminders at your selected notification time.
+          </li>
+          <li>
+            <strong>Internet Access (<code>INTERNET</code>):</strong> Used for secure cloud sync, account authentication, and password reset operations.
+          </li>
+        </ul>
+      </section>
 
-    <footer>
-      &copy; 2026 WordRoot. All rights reserved.
-    </footer>
-  </main>
+      <section>
+        <h2>4. User Rights & Data Deletion (Google Play & GDPR Compliant)</h2>
+        <p>You retain full control over your data. WordRoot provides two straightforward ways to delete your information:</p>
+
+        <div class="deletion-box">
+          <h3>In-App Instant Account & Cloud Deletion</h3>
+          <p>
+            You can delete your account directly inside the app at any time: Open <strong>Profile Tab &rarr; Log Out / Delete &rarr; Delete Account & All Data</strong>. This immediately wipes your account, vocabulary cards, and sync backups from our cloud servers and local storage.
+          </p>
+        </div>
+
+        <div class="callout">
+          <p>
+            <strong>Manual Deletion Request by Email:</strong><br>
+            Alternatively, you may request manual account deletion by emailing <a href="mailto:wordroot.app@gmail.com">wordroot.app@gmail.com</a> with the subject <em>"Account Deletion Request"</em> from your registered email address. All associated data will be removed within 14 days.
+          </p>
+        </div>
+      </section>
+
+      <section>
+        <h2>5. Children's Privacy</h2>
+        <p>
+          WordRoot is an educational vocabulary tool and is not directed at children under 13 years of age. We do not knowingly collect personal data from children under 13. If you become aware that a child has provided us with personal data, please contact us for prompt deletion.
+        </p>
+      </section>
+
+      <section>
+        <h2>6. Contact & Developer Information</h2>
+        <p>If you have any questions or feedback regarding this Privacy Policy, please reach out to:</p>
+        <div class="callout">
+          <p><strong>Developer:</strong> Dev Shah</p>
+          <p><strong>Application:</strong> WordRoot (com.wordroot.app)</p>
+          <p><strong>Support Email:</strong> <a href="mailto:wordroot.app@gmail.com">wordroot.app@gmail.com</a></p>
+        </div>
+      </section>
+
+      <footer>
+        &copy; 2026 WordRoot. All rights reserved.
+      </footer>
+    </main>
+  </div>
+
+  <script>
+    function toggleTheme() {
+      const body = document.body;
+      if (body.classList.contains('dark-mode')) {
+        body.classList.remove('dark-mode');
+        body.classList.add('light-mode');
+      } else {
+        body.classList.remove('light-mode');
+        body.classList.add('dark-mode');
+      }
+    }
+  </script>
 </body>
 </html>

@@ -9,12 +9,13 @@ import {
   Dimensions,
   TextInput,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, runOnJS } from 'react-native-reanimated';
-import { Settings, LogOut, X, ChevronRight, Trophy, Clock, Check, Cloud, RefreshCw, Smartphone, Trash2, CheckCircle2, UserX, AlertTriangle } from 'lucide-react-native';
+import { Settings, LogOut, X, ChevronRight, Trophy, Clock, Check, Cloud, RefreshCw, Smartphone, Trash2, CheckCircle2, UserX, AlertTriangle, ShieldCheck, ExternalLink } from 'lucide-react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import AnalogClockPicker from '../../components/AnalogClockPicker';
 import { useAppStore } from '../../store/useAppStore';
@@ -375,6 +376,23 @@ export default function ProfileScreen() {
                         {formatTimeForDisplay(user?.notificationTime || guestNotificationTime)}
                       </Text>
                       <ChevronRight size={18} color={COLORS.warmgray} style={{ marginLeft: 'auto' }} />
+                    </AnimatedPressable>
+                  </View>
+
+                  {/* About & Legal */}
+                  <Text style={[s.sectionTitle, { color: COLORS.charcoal, marginTop: 28 }]}>About & Legal</Text>
+                  <View style={[s.settingCard, { backgroundColor: COLORS.white, borderColor: COLORS.bone }]}>
+                    <AnimatedPressable
+                      onPress={() => Linking.openURL('https://github.com/Devshah01/wordRoot/blob/main/privacy-policy/index.html')}
+                      style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 4 }}
+                      activeOpacity={0.7}
+                    >
+                      <ShieldCheck size={20} color={COLORS.charcoal} />
+                      <View style={{ marginLeft: 12, flex: 1 }}>
+                        <Text style={[s.settingLabel, { color: COLORS.charcoal }]}>Privacy Policy</Text>
+                        <Text style={[s.settingSub, { color: COLORS.warmgray }]}>Read how your data is protected</Text>
+                      </View>
+                      <ExternalLink size={18} color={COLORS.warmgray} />
                     </AnimatedPressable>
                   </View>
                   <View style={{ height: 32 }} />
