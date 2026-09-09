@@ -8,8 +8,23 @@ const syncRoutes = require('./routes/sync.routes');
 
 const app = express();
 
-// Trust reverse proxy (Cloud Run, Render, Railway, AWS, Nginx)
-app.set('trust proxy', 1);
+// Trust reverse proxy dynamically based on environment
+// Google Cloud Run (standalone): 1 hop (Google Front End)
+// Google Cloud Run + Cloudflare CDN: 2 hops
+// Local Development: false (0 hops)
+const getTrustProxyHops = () => {
+  const envVal = process.env.TRUST_PROXY;
+  if (envVal !== undefined && envVal !== '') {
+    if (envVal === 'true') return true;
+    if (envVal === 'false') return false;
+    const parsed = parseInt(envVal, 10);
+    return isNaN(parsed) ? envVal : parsed;
+  }
+  // Default: 1 hop for production (Cloud Run GFE), false for local development
+  return process.env.NODE_ENV === 'production' ? 1 : false;
+};
+
+app.set('trust proxy', getTrustProxyHops());
 
 app.use(helmet());
 app.use(express.json({ limit: '5mb' }));
@@ -17,9 +32,9 @@ app.use(express.json({ limit: '5mb' }));
 // Global rate limiter
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  limit: 200, // Limit each IP to 200 requests per `window` (here, per 15 minutes)
-  standardHeaders: 'draft-7', // draft-6: `RateLimit-*` headers; draft-7: combined `RateLimit` header
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  limit: 200, // Limit each IP to 200 requests per window (15 minutes)
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
 });
 app.use(limiter);
 
