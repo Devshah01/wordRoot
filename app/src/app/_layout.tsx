@@ -1,5 +1,5 @@
 import { Stack } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { LogBox, Platform, View, StyleSheet, StatusBar } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { 
@@ -51,12 +51,12 @@ export default function RootLayout() {
   // Local daily reminder notifications (offline — no server push)
   useLocalNotifications();
 
-  const handleSplashFinish = async () => {
+  const handleSplashFinish = useCallback(async () => {
     setSplashAnimationComplete(true);
     if (hasCompletedOnboarding) {
       await requestNotificationPermissions();
     }
-  };
+  }, [hasCompletedOnboarding]);
 
   useEffect(() => {
     // Push pending sync queue when back online (logged-in users only)

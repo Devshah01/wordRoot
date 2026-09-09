@@ -51,6 +51,10 @@ export default function AnimatedSplashScreen({ onAnimationFinish }: { onAnimatio
   const rotation = useSharedValue(720);
   const textProgress = useSharedValue(0);
 
+  // Keep a stable ref to onAnimationFinish so we never need it in the effect deps
+  const onFinishRef = useRef(onAnimationFinish);
+  onFinishRef.current = onAnimationFinish;
+
   const audioStopped = useRef(false);
   const spinPlayerRef = useRef<AudioPlayer | null>(null);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -70,6 +74,8 @@ export default function AnimatedSplashScreen({ onAnimationFinish }: { onAnimatio
 
   useEffect(() => {
     let cancelled = false;
+    // Reset on every mount so a re-mount (e.g. hot reload) works correctly
+    audioStopped.current = false;
 
     const startSplashAudio = async () => {
       try {
@@ -113,13 +119,13 @@ export default function AnimatedSplashScreen({ onAnimationFinish }: { onAnimatio
         const finishTimer = setTimeout(() => {
           if (cancelled) return;
           stopSplashAudio();
-          onAnimationFinish();
+          onFinishRef.current();
         }, SPLASH_DURATION_MS);
         timersRef.current.push(finishTimer);
 
       } catch (error) {
         console.warn('[splash] audio setup failed', error);
-        if (!cancelled) onAnimationFinish();
+        if (!cancelled) onFinishRef.current();
       }
     };
 
@@ -129,7 +135,7 @@ export default function AnimatedSplashScreen({ onAnimationFinish }: { onAnimatio
       cancelled = true;
       stopSplashAudio();
     };
-  }, [onAnimationFinish]);
+  }, []);
 
   const logoAnimatedStyle = useAnimatedStyle(() => {
     return {
