@@ -18,13 +18,13 @@ const fsrsSchema = z.object({
 });
 
 const addDataSchema = fsrsSchema.extend({
-  word: z.string().min(1, "Word is required").max(500, "Word must be 500 characters or less"),
+  word: z.string().min(1, "Word is required").max(100, "Word must be 100 characters or less"),
   meaning: z.string().min(1, "Meaning is required").max(500, "Meaning must be 500 characters or less"),
   dateAdded: z.coerce.date().optional(),
 });
 
 const updatedWordSchema = fsrsSchema.extend({
-  word: z.string().min(1).max(500, "Word must be 500 characters or less").optional(),
+  word: z.string().min(1).max(100, "Word must be 100 characters or less").optional(),
   meaning: z.string().min(1).max(500, "Meaning must be 500 characters or less").optional(),
   dateAdded: z.coerce.date().optional(),
 });

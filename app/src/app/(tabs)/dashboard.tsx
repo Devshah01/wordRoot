@@ -248,8 +248,8 @@ export default function DashboardScreen() {
     // Check duplicate words within the current submission
     const seenWordsInBatch = new Set<string>();
     for (const item of allNormalizedEntries) {
-      if (item.word.length > 500) {
-        setErrorMessage(`"${item.word}" exceeds the 500 character limit.`);
+      if (item.word.length > 100) {
+        setErrorMessage(`"${item.word}" exceeds the 100 character limit.`);
         return;
       }
       if (seenWordsInBatch.has(item.word)) {
@@ -556,7 +556,7 @@ export default function DashboardScreen() {
                   </View>
                 ) : null}
                 {editedSavedWords.map((word, index) => {
-                  const wordErr = word.word.length > 500;
+                  const wordErr = word.word.length > 100;
                   const meaningErr = word.meaning.length > 500;
                   const hasErr = wordErr || meaningErr;
                   return (
@@ -601,9 +601,9 @@ export default function DashboardScreen() {
                         <View style={s.inlineErrorRow}>
                           <AlertCircle size={12} color="#EF4444" style={{ marginRight: 4 }} />
                           <Text style={s.inlineErrorText}>
-                            {wordErr ? `Word: ${word.word.length}/500 chars ` : ''}
+                            {wordErr ? `Word: ${word.word.length}/100 chars ` : ''}
                             {meaningErr ? `Meaning: ${word.meaning.length}/500 chars ` : ''}
-                            (Max 500)
+                            (Max: Word 100, Meaning 500)
                           </Text>
                         </View>
                       )}
@@ -612,7 +612,7 @@ export default function DashboardScreen() {
                 })}
 
                 {vocabLines.map((line, index) => {
-                  const wordErr = line.word.length > 500;
+                  const wordErr = line.word.length > 100;
                   const meaningErr = line.meaning.length > 500;
                   const hasErr = wordErr || meaningErr;
                   return (
@@ -649,9 +649,9 @@ export default function DashboardScreen() {
                         <View style={s.inlineErrorRow}>
                           <AlertCircle size={12} color="#EF4444" style={{ marginRight: 4 }} />
                           <Text style={s.inlineErrorText}>
-                            {wordErr ? `Word: ${line.word.length}/500 chars ` : ''}
+                            {wordErr ? `Word: ${line.word.length}/100 chars ` : ''}
                             {meaningErr ? `Meaning: ${line.meaning.length}/500 chars ` : ''}
-                            (Max 500)
+                            (Max: Word 100, Meaning 500)
                           </Text>
                         </View>
                       )}
