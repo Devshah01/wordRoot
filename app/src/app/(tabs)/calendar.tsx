@@ -12,7 +12,7 @@ import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
 import AnimatedPressable from '../../components/AnimatedPressable';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { ChevronLeft, ChevronRight, Trash2, Edit2, X, Search, BookOpen, ArrowLeft, Plus, AlertCircle } from 'lucide-react-native';
 import { useAppStore } from '../../store/useAppStore';
 import { APP_COLORS } from '../../constants/theme';
@@ -69,6 +69,12 @@ export default function CalendarScreen() {
       }
     }
   }, [focusDate]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      loadLocalDatabase();
+    }, [loadLocalDatabase])
+  );
 
   const selectedDateStr = formatLocalDateString(selectedDate);
   const allWords = useMemo(() => {
@@ -475,7 +481,7 @@ export default function CalendarScreen() {
                     {selectedDateWords.map((item, index) => (
                         <View key={index} style={[s.wordCard, index === selectedDateWords.length - 1 && { borderBottomWidth: 0 }]}>
                           <Text style={s.wordRowNum}>{index + 1}.</Text>
-                          <View style={{ flex: 1, marginRight: 12, flexDirection: 'row', alignItems: 'center' }}>
+                          <View style={{ flex: 1, marginRight: 12, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
                             <Text style={s.wordTitle}>{item.word}</Text>
                             {item.isDraft && (
                               <View style={{ backgroundColor: COLORS.lightgray, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2, marginLeft: 8 }}>
