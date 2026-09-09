@@ -284,39 +284,35 @@ export default function CalendarScreen() {
   };
 
   const handleSwipeLeft = () => {
-    setSelectedDate(prev => {
-      const next = new Date(prev);
-      next.setDate(next.getDate() + 1);
-      setCurrentMonth(next.getMonth());
-      setCurrentYear(next.getFullYear());
-      
-      const dStr = formatLocalDateString(next);
-      const originalSelectedWords = allWords.filter((w) => {
-        return formatLocalDateString(w.dateAdded || new Date()) === dStr && !w.isDraft;
-      });
-      setCalendarEditedWords(JSON.parse(JSON.stringify(originalSelectedWords)));
-      setCalendarDrafts(Array(5).fill(null).map(() => ({ word: '', meaning: '' })));
+    const next = new Date(selectedDate);
+    next.setDate(next.getDate() + 1);
 
-      return next;
+    setSelectedDate(next);
+    setCurrentMonth(next.getMonth());
+    setCurrentYear(next.getFullYear());
+    
+    const dStr = formatLocalDateString(next);
+    const originalSelectedWords = allWords.filter((w) => {
+      return formatLocalDateString(w.dateAdded || new Date()) === dStr && !w.isDraft;
     });
+    setCalendarEditedWords(JSON.parse(JSON.stringify(originalSelectedWords)));
+    setCalendarDrafts(Array(5).fill(null).map(() => ({ word: '', meaning: '' })));
   };
 
   const handleSwipeRight = () => {
-    setSelectedDate(prev => {
-      const prevDate = new Date(prev);
-      prevDate.setDate(prevDate.getDate() - 1);
-      setCurrentMonth(prevDate.getMonth());
-      setCurrentYear(prevDate.getFullYear());
-      
-      const dStr = formatLocalDateString(prevDate);
-      const originalSelectedWords = allWords.filter((w) => {
-        return formatLocalDateString(w.dateAdded || new Date()) === dStr && !w.isDraft;
-      });
-      setCalendarEditedWords(JSON.parse(JSON.stringify(originalSelectedWords)));
-      setCalendarDrafts(Array(5).fill(null).map(() => ({ word: '', meaning: '' })));
+    const prevDate = new Date(selectedDate);
+    prevDate.setDate(prevDate.getDate() - 1);
 
-      return prevDate;
+    setSelectedDate(prevDate);
+    setCurrentMonth(prevDate.getMonth());
+    setCurrentYear(prevDate.getFullYear());
+    
+    const dStr = formatLocalDateString(prevDate);
+    const originalSelectedWords = allWords.filter((w) => {
+      return formatLocalDateString(w.dateAdded || new Date()) === dStr && !w.isDraft;
     });
+    setCalendarEditedWords(JSON.parse(JSON.stringify(originalSelectedWords)));
+    setCalendarDrafts(Array(5).fill(null).map(() => ({ word: '', meaning: '' })));
   };
 
   const dayPanGesture = Gesture.Pan()
