@@ -54,8 +54,10 @@ async function issueTokenPair(user) {
   await prisma.refreshToken.create({
     data: {
       token: refreshToken,
-      userId: user.id,
       expiresAt,
+      user: {
+        connect: { id: user.id },
+      },
     },
   });
 
