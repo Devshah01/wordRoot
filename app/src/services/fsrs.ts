@@ -5,19 +5,32 @@ import { Word } from '../store/useAppStore';
 const params: FSRSParameters = generatorParameters({ enable_fuzz: true });
 const f = fsrs(params);
 
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
+/**
+ * Calculates calendar days difference between two dates by resetting time to local midnight.
+ * This ensures reviewing a card across day boundaries (e.g. 11:50 PM to 8:00 AM next morning)
+ * yields 1 calendar day instead of 0 due to continuous millisecond rounding.
+ */
+const getCalendarDaysDifference = (laterDate: Date, earlierDate: Date): number => {
+  const d1 = new Date(laterDate.getFullYear(), laterDate.getMonth(), laterDate.getDate());
+  const d2 = new Date(earlierDate.getFullYear(), earlierDate.getMonth(), earlierDate.getDate());
+  return Math.round((d1.getTime() - d2.getTime()) / MS_PER_DAY);
+};
+
 export const calculateNextFSRSState = (word: Word, ratingString: 'remember' | 'forgot'): Word => {
   const now = new Date();
   
-  // Calculate elapsed_days and scheduled_days accurately for ts-fsrs
+  // Calculate elapsed_days and scheduled_days accurately for ts-fsrs (calendar day difference)
   const lastReviewDate = word.lastReview ? new Date(word.lastReview) : null;
   const nextReviewDate = word.nextReview ? new Date(word.nextReview) : now;
 
   const elapsed_days = lastReviewDate
-    ? Math.max(0, Math.floor((now.getTime() - lastReviewDate.getTime()) / (1000 * 60 * 60 * 24)))
+    ? Math.max(0, getCalendarDaysDifference(now, lastReviewDate))
     : 0;
 
   const scheduled_days = (lastReviewDate && word.nextReview)
-    ? Math.max(1, Math.floor((nextReviewDate.getTime() - lastReviewDate.getTime()) / (1000 * 60 * 60 * 24)))
+    ? Math.max(1, getCalendarDaysDifference(nextReviewDate, lastReviewDate))
     : 0;
 
   // Convert our flat DB state to a ts-fsrs Card object
