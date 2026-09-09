@@ -32,7 +32,7 @@ const limiter = rateLimit({
   limit: 200, // Limit each IP to 200 requests per window (15 minutes)
   standardHeaders: 'draft-7',
   legacyHeaders: false,
-  validate: { xForwardedForHeader: false },
+  validate: { xForwardedForHeader: false, forwardedHeader: false },
 });
 app.use(limiter);
 
