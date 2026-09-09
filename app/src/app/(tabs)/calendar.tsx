@@ -186,11 +186,23 @@ export default function CalendarScreen() {
     // Check duplicate words within the current submission
     const seenWordsInBatch = new Set<string>();
     for (const item of allNormalizedEntries) {
+      if (item.word.length > 500) {
+        setErrorMessage(`"${item.word}" exceeds the 500 character limit.`);
+        return;
+      }
       if (seenWordsInBatch.has(item.word)) {
         setErrorMessage(`"${item.word}" is listed more than once in your entries.`);
         return;
       }
       seenWordsInBatch.add(item.word);
+    }
+
+    // Check meaning length limit
+    const meaningTooLong = validDrafts.some(e => e.meaning.trim().length > 500) ||
+                           modifiedWords.some(w => w.meaning.trim().length > 500);
+    if (meaningTooLong) {
+      setErrorMessage('Meaning must be 500 characters or less.');
+      return;
     }
 
     // Check against existing words in vocabulary (excluding the word itself if editing)
@@ -479,25 +491,29 @@ export default function CalendarScreen() {
                     contentContainerStyle={{ paddingVertical: 4 }}
                   >
                     {selectedDateWords.map((item, index) => (
-                        <View key={index} style={[s.wordCard, index === selectedDateWords.length - 1 && { borderBottomWidth: 0 }]}>
-                          <Text style={s.wordRowNum}>{index + 1}.</Text>
-                          <View style={{ flex: 1, marginRight: 12, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
-                            <Text style={s.wordTitle}>{item.word}</Text>
-                            {item.isDraft && (
-                              <View style={{ backgroundColor: COLORS.lightgray, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2, marginLeft: 8 }}>
-                                <Text style={{ fontFamily: 'Inter_500Medium', fontSize: 10, color: COLORS.warmgray }}>Draft</Text>
-                              </View>
+                      <View key={index} style={[s.wordCard, index === selectedDateWords.length - 1 && { borderBottomWidth: 0 }]}>
+                        <Text style={s.wordRowNum}>{index + 1}.</Text>
+                        <View style={{ flex: 1, marginRight: 4 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, flexWrap: 'wrap', gap: 6 }}>
+                              <Text style={s.wordTitle}>{item.word}</Text>
+                              {item.isDraft && (
+                                <View style={{ backgroundColor: COLORS.lightgray, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 }}>
+                                  <Text style={{ fontFamily: 'Inter_500Medium', fontSize: 10, color: COLORS.warmgray }}>Draft</Text>
+                                </View>
+                              )}
+                            </View>
+                            {!item.isDraft && (
+                              <AnimatedPressable onPress={() => handleDeleteWord(item)} style={s.iconBtnSm}>
+                                <Trash2 size={18} color="#EF4444" strokeWidth={2} />
+                              </AnimatedPressable>
                             )}
-                            <View style={s.wordDivider} />
-                            <Text style={s.wordMeaning}>{item.meaning}</Text>
                           </View>
-                          {!item.isDraft && (
-                            <AnimatedPressable onPress={() => handleDeleteWord(item)} style={s.iconBtnSm}>
-                              <Trash2 size={18} color="#EF4444" strokeWidth={2} />
-                            </AnimatedPressable>
-                          )}
+                          {item.meaning.trim() ? (
+                            <Text style={s.wordMeaning}>{item.meaning}</Text>
+                          ) : null}
                         </View>
-                      
+                      </View>
                     ))}
                   </ScrollView>
                 )}
@@ -532,77 +548,121 @@ export default function CalendarScreen() {
                     <Text style={s.errorText}>{errorMessage}</Text>
                   </View>
                 ) : null}
-                {calendarEditedWords.map((word, index) => (
-                    <View key={`saved-${index}`} style={s.wordRow}>
-                      <Text style={s.wordRowNum}>{index + 1}.</Text>
-                      <View style={s.wordRowContent}>
-                        <TextInput
-                          style={s.wordInputSaved}
-                          value={word.word}
-                          onChangeText={(val) => {
-                            const newArr = [...calendarEditedWords];
-                            newArr[index].word = val;
-                            setCalendarEditedWords(newArr);
-                          }}
-                          autoCapitalize="none"
-                        />
-                        <View style={s.rowDivider} />
-                        <TextInput
-                          style={s.meaningInputSaved}
-                          value={word.meaning}
-                          onChangeText={(val) => {
-                            const newArr = [...calendarEditedWords];
-                            newArr[index].meaning = val;
-                            setCalendarEditedWords(newArr);
-                          }}
-                        />
+                {calendarEditedWords.map((word, index) => {
+                  const wordErr = word.word.length > 500;
+                  const meaningErr = word.meaning.length > 500;
+                  const hasErr = wordErr || meaningErr;
+                  return (
+                    <View key={`saved-${index}`} style={{ marginBottom: 14 }}>
+                      <View style={s.wordRow}>
+                        <Text style={s.wordRowNumExpanded}>{index + 1}.</Text>
+                        <View style={[s.wordCardBox, hasErr && s.wordRowContentError]}>
+                          <View style={s.wordCardHeader}>
+                            <TextInput
+                              placeholder="Word"
+                              placeholderTextColor={COLORS.warmgray}
+                              style={s.wordInputSaved}
+                              value={word.word}
+                              onChangeText={(val) => {
+                                const newArr = [...calendarEditedWords];
+                                newArr[index].word = val;
+                                setCalendarEditedWords(newArr);
+                              }}
+                              autoCapitalize="none"
+                            />
+                            <AnimatedPressable style={s.wordRowIcon} onPress={() => handleDeleteWord(word)}>
+                              <Trash2 size={18} color="#E74C3C" />
+                            </AnimatedPressable>
+                          </View>
+                          <View style={s.wordCardDivider} />
+                          <TextInput
+                            placeholder="Meaning"
+                            placeholderTextColor={COLORS.warmgray}
+                            style={s.meaningInputSaved}
+                            value={word.meaning}
+                            onChangeText={(val) => {
+                              const newArr = [...calendarEditedWords];
+                              newArr[index].meaning = val;
+                              setCalendarEditedWords(newArr);
+                            }}
+                            multiline={true}
+                            textAlignVertical="top"
+                          />
+                        </View>
                       </View>
-                      <AnimatedPressable style={s.wordRowIcon} onPress={() => handleDeleteWord(word)}>
-                        <Trash2 size={20} color="#E74C3C" />
-                      </AnimatedPressable>
+                      {hasErr && (
+                        <View style={s.inlineErrorRow}>
+                          <AlertCircle size={12} color="#EF4444" style={{ marginRight: 4 }} />
+                          <Text style={s.inlineErrorText}>
+                            {wordErr ? `Word: ${word.word.length}/500 chars ` : ''}
+                            {meaningErr ? `Meaning: ${word.meaning.length}/500 chars ` : ''}
+                            (Max 500)
+                          </Text>
+                        </View>
+                      )}
                     </View>
-                  
-                ))}
+                  );
+                })}
 
-                {calendarDrafts.map((line, index) => (
-                    <View key={`draft-${index}`} style={s.wordRow}>
-                      <Text style={s.wordRowNum}>{calendarEditedWords.length + index + 1}.</Text>
-                      <View style={s.wordRowContent}>
-                        <TextInput
-                          placeholder="Word"
-                          placeholderTextColor={COLORS.warmgray}
-                          value={line.word}
-                          onChangeText={(val) => {
-                            const newArr = [...calendarDrafts];
-                            newArr[index].word = val;
-                            setCalendarDrafts(newArr);
-                          }}
-                          style={s.wordInput}
-                          autoCapitalize="none"
-                        />
-                        <View style={s.rowDivider} />
-                        <TextInput
-                          placeholder="Meaning"
-                          placeholderTextColor={COLORS.warmgray}
-                          value={line.meaning}
-                          onChangeText={(val) => {
-                            const newArr = [...calendarDrafts];
-                            newArr[index].meaning = val;
-                            setCalendarDrafts(newArr);
-                          }}
-                          style={s.meaningInput}
-                        />
+                {calendarDrafts.map((line, index) => {
+                  const wordErr = line.word.length > 500;
+                  const meaningErr = line.meaning.length > 500;
+                  const hasErr = wordErr || meaningErr;
+                  return (
+                    <View key={`draft-${index}`} style={{ marginBottom: 14 }}>
+                      <View style={s.wordRow}>
+                        <Text style={s.wordRowNumExpanded}>{calendarEditedWords.length + index + 1}.</Text>
+                        <View style={[s.wordCardBox, hasErr && s.wordRowContentError]}>
+                          <View style={s.wordCardHeader}>
+                            <TextInput
+                              placeholder="Word"
+                              placeholderTextColor={COLORS.warmgray}
+                              value={line.word}
+                              onChangeText={(val) => {
+                                const newArr = [...calendarDrafts];
+                                newArr[index].word = val;
+                                setCalendarDrafts(newArr);
+                              }}
+                              style={s.wordInput}
+                              autoCapitalize="none"
+                            />
+                            <AnimatedPressable style={s.wordRowIcon} onPress={() => {
+                              const updated = [...calendarDrafts];
+                              updated.splice(index, 1);
+                              setCalendarDrafts(updated.length > 0 ? updated : [{ word: '', meaning: '' }]);
+                            }}>
+                              <Trash2 size={18} color="#E74C3C" />
+                            </AnimatedPressable>
+                          </View>
+                          <View style={s.wordCardDivider} />
+                          <TextInput
+                            placeholder="Meaning"
+                            placeholderTextColor={COLORS.warmgray}
+                            value={line.meaning}
+                            onChangeText={(val) => {
+                              const newArr = [...calendarDrafts];
+                              newArr[index].meaning = val;
+                              setCalendarDrafts(newArr);
+                            }}
+                            style={s.meaningInput}
+                            multiline={true}
+                            textAlignVertical="top"
+                          />
+                        </View>
                       </View>
-                      <AnimatedPressable style={s.wordRowIcon} onPress={() => {
-                        const updated = [...calendarDrafts];
-                        updated.splice(index, 1);
-                        setCalendarDrafts(updated.length > 0 ? updated : [{ word: '', meaning: '' }]);
-                      }}>
-                        <Trash2 size={20} color="#E74C3C" />
-                      </AnimatedPressable>
+                      {hasErr && (
+                        <View style={s.inlineErrorRow}>
+                          <AlertCircle size={12} color="#EF4444" style={{ marginRight: 4 }} />
+                          <Text style={s.inlineErrorText}>
+                            {wordErr ? `Word: ${line.word.length}/500 chars ` : ''}
+                            {meaningErr ? `Meaning: ${line.meaning.length}/500 chars ` : ''}
+                            (Max 500)
+                          </Text>
+                        </View>
+                      )}
                     </View>
-                  
-                ))}
+                  );
+                })}
 
                 <AnimatedPressable onPress={() => setCalendarDrafts([...calendarDrafts, { word: '', meaning: '' }])} style={s.addLineBtn}>
                   <Plus size={24} color={COLORS.white} />
@@ -728,6 +788,21 @@ const getStyles = (COLORS: any, isDarkMode: boolean) => StyleSheet.create({
     color: isDarkMode ? '#FCA5A5' : '#DC2626',
     flex: 1,
   },
+  inlineErrorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 32,
+    marginTop: 4,
+  },
+  inlineErrorText: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 11,
+    color: '#EF4444',
+  },
+  wordRowContentError: {
+    borderColor: '#EF4444',
+    borderWidth: 1.5,
+  },
   container: { flex: 1, backgroundColor: COLORS.bg },
   content: { flex: 1, paddingHorizontal: GRID_PADDING, paddingTop: 4 },
 
@@ -802,14 +877,14 @@ const getStyles = (COLORS: any, isDarkMode: boolean) => StyleSheet.create({
     paddingVertical: 24,
   },
   wordCard: {
-    flexDirection: 'row', alignItems: 'center',
+    flexDirection: 'row', alignItems: 'flex-start',
     paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: COLORS.bone,
   },
-  wordRowNum: { fontFamily: 'Inter_500Medium', fontSize: 13, color: COLORS.warmgray, marginRight: 16, width: 16 },
+  wordRowNum: { fontFamily: 'Inter_500Medium', fontSize: 13, color: COLORS.warmgray, marginRight: 12, width: 20, marginTop: 2 },
   wordTitle: { fontFamily: 'Outfit_700Bold', fontSize: 16, color: COLORS.charcoal, textTransform: 'capitalize' },
   wordDivider: { width: 1, height: 16, backgroundColor: COLORS.bone, marginHorizontal: 12 },
-  wordMeaning: { fontFamily: 'Inter_400Regular', fontSize: 14, color: COLORS.warmgray, flex: 1 },
-  iconBtnSm: { padding: 8 },
+  wordMeaning: { fontFamily: 'Inter_400Regular', fontSize: 14, color: COLORS.warmgray, marginTop: 4, lineHeight: 20 },
+  iconBtnSm: { padding: 4 },
 
   emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 32 },
   emptyText: { fontFamily: 'Inter_400Regular', fontSize: 14, color: COLORS.warmgray },
@@ -861,15 +936,39 @@ const getStyles = (COLORS: any, isDarkMode: boolean) => StyleSheet.create({
   },
   savePill: { backgroundColor: COLORS.charcoal, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
   savePillText: { fontFamily: 'Inter_500Medium', fontSize: 13, color: COLORS.bg },
-  wordRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: COLORS.bone, gap: 8 },
-  wordRowNumExpanded: { fontFamily: 'Inter_500Medium', fontSize: 14, color: COLORS.warmgray, width: 24 },
+  wordRow: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 4, gap: 8 },
+  wordRowNumExpanded: { fontFamily: 'Inter_500Medium', fontSize: 14, color: COLORS.warmgray, width: 24, marginTop: 14 },
+  wordCardBox: {
+    flex: 1,
+    backgroundColor: COLORS.card,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: COLORS.bone,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 1,
+  },
+  wordCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  wordCardDivider: {
+    height: 1,
+    backgroundColor: COLORS.bone,
+    marginVertical: 8,
+  },
   wordRowContent: { flex: 1, flexDirection: 'row', alignItems: 'center' },
-  wordInput: { flex: 1, fontFamily: 'Outfit_700Bold', fontSize: 16, color: COLORS.charcoal, padding: 0 },
-  wordInputSaved: { flex: 1, fontFamily: 'Outfit_700Bold', fontSize: 16, color: COLORS.charcoal },
+  wordInput: { flex: 1, fontFamily: 'Outfit_700Bold', fontSize: 16, color: COLORS.charcoal, paddingVertical: 2 },
+  wordInputSaved: { flex: 1, fontFamily: 'Outfit_700Bold', fontSize: 16, color: COLORS.charcoal, paddingVertical: 2 },
   rowDivider: { width: 1, height: 20, backgroundColor: COLORS.bone, marginHorizontal: 12 },
-  meaningInput: { flex: 1.5, fontFamily: 'Inter_400Regular', fontSize: 14, color: COLORS.warmgray, padding: 0 },
-  meaningInputSaved: { flex: 1.5, fontFamily: 'Inter_400Regular', fontSize: 14, color: COLORS.charcoal },
-  wordRowIcon: { padding: 8 },
+  meaningInput: { fontFamily: 'Inter_400Regular', fontSize: 14, color: COLORS.charcoal, minHeight: 48, textAlignVertical: 'top', paddingVertical: 2 },
+  meaningInputSaved: { fontFamily: 'Inter_400Regular', fontSize: 14, color: COLORS.charcoal, minHeight: 48, textAlignVertical: 'top', paddingVertical: 2 },
+  wordRowIcon: { padding: 4, marginLeft: 6 },
   addLineBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.charcoal, justifyContent: 'center', alignItems: 'center', alignSelf: 'center', marginVertical: 32 },
 });
 

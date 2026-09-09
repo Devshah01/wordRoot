@@ -248,11 +248,23 @@ export default function DashboardScreen() {
     // Check duplicate words within the current submission
     const seenWordsInBatch = new Set<string>();
     for (const item of allNormalizedEntries) {
+      if (item.word.length > 500) {
+        setErrorMessage(`"${item.word}" exceeds the 500 character limit.`);
+        return;
+      }
       if (seenWordsInBatch.has(item.word)) {
         setErrorMessage(`"${item.word}" is listed more than once in your entries.`);
         return;
       }
       seenWordsInBatch.add(item.word);
+    }
+
+    // Check meaning length limit
+    const meaningTooLong = validEntries.some(e => e.meaning.trim().length > 500) ||
+                           modifiedWords.some(w => w.meaning.trim().length > 500);
+    if (meaningTooLong) {
+      setErrorMessage('Meaning must be 500 characters or less.');
+      return;
     }
 
     // Check against existing words in vocabulary (excluding the word itself if editing)
@@ -543,63 +555,109 @@ export default function DashboardScreen() {
                     <Text style={s.errorText}>{errorMessage}</Text>
                   </View>
                 ) : null}
-                {editedSavedWords.map((word, index) => (
-                  <View key={`saved-${index}`} style={s.wordRow}>
-                    <Text style={s.wordRowNum}>{index + 1}.</Text>
-                    <View style={s.wordRowContent}>
-                      <TextInput
-                        style={s.wordInputSaved}
-                        value={word.word}
-                        onChangeText={(val) => {
-                          const newArr = [...editedSavedWords];
-                          newArr[index].word = val;
-                          setEditedSavedWords(newArr);
-                        }}
-                        autoCapitalize="none"
-                      />
-                      <View style={s.rowDivider} />
-                      <TextInput
-                        style={s.meaningInputSaved}
-                        value={word.meaning}
-                        onChangeText={(val) => {
-                          const newArr = [...editedSavedWords];
-                          newArr[index].meaning = val;
-                          setEditedSavedWords(newArr);
-                        }}
-                      />
+                {editedSavedWords.map((word, index) => {
+                  const wordErr = word.word.length > 500;
+                  const meaningErr = word.meaning.length > 500;
+                  const hasErr = wordErr || meaningErr;
+                  return (
+                    <View key={`saved-${index}`} style={{ marginBottom: 14 }}>
+                      <View style={s.wordRow}>
+                        <Text style={s.wordRowNum}>{index + 1}.</Text>
+                        <View style={[s.wordCardBox, hasErr && s.wordRowContentError]}>
+                          <View style={s.wordCardHeader}>
+                            <TextInput
+                              placeholder="Word"
+                              placeholderTextColor={COLORS.warmgray}
+                              style={s.wordInputSaved}
+                              value={word.word}
+                              onChangeText={(val) => {
+                                const newArr = [...editedSavedWords];
+                                newArr[index].word = val;
+                                setEditedSavedWords(newArr);
+                              }}
+                              autoCapitalize="none"
+                            />
+                            <AnimatedPressable style={s.wordRowIcon} onPress={() => handleDeleteSavedWord(word)}>
+                              <Trash2 size={18} color="#E74C3C" />
+                            </AnimatedPressable>
+                          </View>
+                          <View style={s.wordCardDivider} />
+                          <TextInput
+                            placeholder="Meaning"
+                            placeholderTextColor={COLORS.warmgray}
+                            style={s.meaningInputSaved}
+                            value={word.meaning}
+                            onChangeText={(val) => {
+                              const newArr = [...editedSavedWords];
+                              newArr[index].meaning = val;
+                              setEditedSavedWords(newArr);
+                            }}
+                            multiline={true}
+                            textAlignVertical="top"
+                          />
+                        </View>
+                      </View>
+                      {hasErr && (
+                        <View style={s.inlineErrorRow}>
+                          <AlertCircle size={12} color="#EF4444" style={{ marginRight: 4 }} />
+                          <Text style={s.inlineErrorText}>
+                            {wordErr ? `Word: ${word.word.length}/500 chars ` : ''}
+                            {meaningErr ? `Meaning: ${word.meaning.length}/500 chars ` : ''}
+                            (Max 500)
+                          </Text>
+                        </View>
+                      )}
                     </View>
-                    <AnimatedPressable style={s.wordRowIcon} onPress={() => handleDeleteSavedWord(word)}>
-                      <Trash2 size={20} color="#E74C3C" />
-                    </AnimatedPressable>
-                  </View>
-                ))}
+                  );
+                })}
 
-                {vocabLines.map((line, index) => (
-                  <View key={`line-${index}`} style={s.wordRow}>
-                    <Text style={s.wordRowNum}>{editedSavedWords.length + index + 1}.</Text>
-                    <View style={s.wordRowContent}>
-                      <TextInput
-                        placeholder="Word"
-                        placeholderTextColor={COLORS.warmgray}
-                        value={line.word}
-                        onChangeText={(val) => updateVocabLine(index, 'word', val)}
-                        style={s.wordInput}
-                        autoCapitalize="none"
-                      />
-                      <View style={s.rowDivider} />
-                      <TextInput
-                        placeholder="Meaning"
-                        placeholderTextColor={COLORS.warmgray}
-                        value={line.meaning}
-                        onChangeText={(val) => updateVocabLine(index, 'meaning', val)}
-                        style={s.meaningInput}
-                      />
+                {vocabLines.map((line, index) => {
+                  const wordErr = line.word.length > 500;
+                  const meaningErr = line.meaning.length > 500;
+                  const hasErr = wordErr || meaningErr;
+                  return (
+                    <View key={`line-${index}`} style={{ marginBottom: 14 }}>
+                      <View style={s.wordRow}>
+                        <Text style={s.wordRowNum}>{editedSavedWords.length + index + 1}.</Text>
+                        <View style={[s.wordCardBox, hasErr && s.wordRowContentError]}>
+                          <View style={s.wordCardHeader}>
+                            <TextInput
+                              placeholder="Word"
+                              placeholderTextColor={COLORS.warmgray}
+                              value={line.word}
+                              onChangeText={(val) => updateVocabLine(index, 'word', val)}
+                              style={s.wordInput}
+                              autoCapitalize="none"
+                            />
+                            <AnimatedPressable style={s.wordRowIcon} onPress={() => removeVocabLine(index)}>
+                              <Trash2 size={18} color="#E74C3C" />
+                            </AnimatedPressable>
+                          </View>
+                          <View style={s.wordCardDivider} />
+                          <TextInput
+                            placeholder="Meaning"
+                            placeholderTextColor={COLORS.warmgray}
+                            value={line.meaning}
+                            onChangeText={(val) => updateVocabLine(index, 'meaning', val)}
+                            style={s.meaningInput}
+                            multiline={true}
+                            textAlignVertical="top"
+                          />
+                        </View>
+                      </View>
+                      {hasErr && (
+                        <View style={s.inlineErrorRow}>
+                          <AlertCircle size={12} color="#EF4444" style={{ marginRight: 4 }} />
+                          <Text style={s.inlineErrorText}>
+                            {wordErr ? `Word: ${line.word.length}/500 chars ` : ''}
+                            {meaningErr ? `Meaning: ${line.meaning.length}/500 chars ` : ''}
+                            (Max 500)
+                          </Text>
+                        </View>
+                      )}
                     </View>
-                    <AnimatedPressable style={s.wordRowIcon} onPress={() => removeVocabLine(index)}>
-                      <Trash2 size={20} color="#E74C3C" />
-                    </AnimatedPressable>
-                  </View>
-                ))}
+                  );
+                })}
                 <AnimatedPressable onPress={addVocabLine} style={[s.addLineBtn, { alignSelf: 'center', marginTop: 32 }]}>
                   <Plus size={24} color={COLORS.white} />
                 </AnimatedPressable>
@@ -714,6 +772,21 @@ const getStyles = (COLORS: any, isDarkMode: boolean) => StyleSheet.create({
     fontSize: 13,
     color: isDarkMode ? '#FCA5A5' : '#DC2626',
     flex: 1,
+  },
+  inlineErrorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 32,
+    marginTop: 4,
+  },
+  inlineErrorText: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 11,
+    color: '#EF4444',
+  },
+  wordRowContentError: {
+    borderColor: '#EF4444',
+    borderWidth: 1.5,
   },
   container: { flex: 1, backgroundColor: COLORS.bg },
   content: { flex: 1, paddingHorizontal: 20, paddingTop: 12 }, 
@@ -876,15 +949,39 @@ const getStyles = (COLORS: any, isDarkMode: boolean) => StyleSheet.create({
   modalTitle: { fontFamily: 'Outfit_700Bold', fontSize: 18, color: COLORS.charcoal },
   savePill: { backgroundColor: COLORS.charcoal, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
   savePillText: { fontFamily: 'Inter_500Medium', fontSize: 13, color: COLORS.bg },
-  wordRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: COLORS.bone, gap: 8 },
-  wordRowNum: { fontFamily: 'Inter_500Medium', fontSize: 14, color: COLORS.warmgray, width: 24 },
+  wordRow: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 4, gap: 8 },
+  wordRowNum: { fontFamily: 'Inter_500Medium', fontSize: 14, color: COLORS.warmgray, width: 24, marginTop: 14 },
+  wordCardBox: {
+    flex: 1,
+    backgroundColor: COLORS.card,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: COLORS.bone,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 6,
+    elevation: 1,
+  },
+  wordCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  wordCardDivider: {
+    height: 1,
+    backgroundColor: COLORS.bone,
+    marginVertical: 8,
+  },
   wordRowContent: { flex: 1, flexDirection: 'row', alignItems: 'center' },
-  wordInput: { flex: 1, fontFamily: 'Outfit_700Bold', fontSize: 16, color: COLORS.charcoal, padding: 0 },
-  wordInputSaved: { flex: 1, fontFamily: 'Outfit_700Bold', fontSize: 16, color: COLORS.charcoal },
+  wordInput: { flex: 1, fontFamily: 'Outfit_700Bold', fontSize: 16, color: COLORS.charcoal, paddingVertical: 2 },
+  wordInputSaved: { flex: 1, fontFamily: 'Outfit_700Bold', fontSize: 16, color: COLORS.charcoal, paddingVertical: 2 },
   rowDivider: { width: 1, height: 20, backgroundColor: COLORS.bone, marginHorizontal: 12 },
-  meaningInput: { flex: 1.5, fontFamily: 'Inter_400Regular', fontSize: 14, color: COLORS.warmgray, padding: 0 },
-  meaningInputSaved: { flex: 1.5, fontFamily: 'Inter_400Regular', fontSize: 14, color: COLORS.charcoal },
-  wordRowIcon: { padding: 8 },
+  meaningInput: { fontFamily: 'Inter_400Regular', fontSize: 14, color: COLORS.charcoal, minHeight: 48, textAlignVertical: 'top', paddingVertical: 2 },
+  meaningInputSaved: { fontFamily: 'Inter_400Regular', fontSize: 14, color: COLORS.charcoal, minHeight: 48, textAlignVertical: 'top', paddingVertical: 2 },
+  wordRowIcon: { padding: 4, marginLeft: 6 },
   addLineBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.charcoal, justifyContent: 'center', alignItems: 'center', alignSelf: 'flex-end', marginVertical: 20 },
 
   // Notifications

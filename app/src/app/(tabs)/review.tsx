@@ -16,7 +16,7 @@ import Animated, {
   withTiming,
   interpolate,
 } from 'react-native-reanimated';
-import { CheckCircle2, ChevronLeft, XCircle, Sparkles, BookOpen, ArrowRight, Play } from 'lucide-react-native';
+import { CheckCircle2, ChevronLeft, XCircle, Sparkles, BookOpen, ArrowRight, Play, ChevronDown, ChevronUp } from 'lucide-react-native';
 import { useAppStore, Word } from '../../store/useAppStore';
 import { calculateNextFSRSState } from '../../services/fsrs';
 import { saveWord, getWords } from '../../db/queries';
@@ -48,6 +48,43 @@ export default function ReviewScreen() {
   const [isFlipped, setIsFlipped] = useState(false);
 
   const flipRotation = useSharedValue(0);
+
+  const [frontContentHeight, setFrontContentHeight] = useState(0);
+  const [frontContainerHeight, setFrontContainerHeight] = useState(0);
+  const [frontScrollY, setFrontScrollY] = useState(0);
+  const frontScrollRef = React.useRef<ScrollView>(null);
+
+  const [backContentHeight, setBackContentHeight] = useState(0);
+  const [backContainerHeight, setBackContainerHeight] = useState(0);
+  const [backScrollY, setBackScrollY] = useState(0);
+  const backScrollRef = React.useRef<ScrollView>(null);
+
+  const isFrontOverflowing = frontContentHeight > (frontContainerHeight + 6) && frontContainerHeight > 0;
+  const isBackOverflowing = backContentHeight > (backContainerHeight + 6) && backContainerHeight > 0;
+  const currentOverflowing = isFlipped ? isBackOverflowing : isFrontOverflowing;
+
+  const currentScrollY = isFlipped ? backScrollY : frontScrollY;
+  const currentContentHeight = isFlipped ? backContentHeight : frontContentHeight;
+  const currentContainerHeight = isFlipped ? backContainerHeight : frontContainerHeight;
+  const activeScrollRef = isFlipped ? backScrollRef : frontScrollRef;
+
+  useEffect(() => {
+    setFrontScrollY(0);
+    setBackScrollY(0);
+    frontScrollRef.current?.scrollTo({ y: 0, animated: false });
+    backScrollRef.current?.scrollTo({ y: 0, animated: false });
+  }, [currentIndex, isFlipped]);
+
+  const handleScrollUp = () => {
+    const nextY = Math.max(0, currentScrollY - 110);
+    activeScrollRef.current?.scrollTo({ y: nextY, animated: true });
+  };
+
+  const handleScrollDown = () => {
+    const maxScroll = Math.max(0, currentContentHeight - currentContainerHeight + 20);
+    const nextY = Math.min(maxScroll, currentScrollY + 110);
+    activeScrollRef.current?.scrollTo({ y: nextY, animated: true });
+  };
 
   const loadPendingData = useCallback(async () => {
     setLoading(true);
@@ -404,32 +441,53 @@ export default function ReviewScreen() {
                   >
                     {/* FRONT */}
                     <Animated.View style={[s.cardFace, s.cardFront, frontAnimatedStyle]}>
-                      {isMeaningToWord ? (
-                        <>
-                          <Text style={s.cardPromptMeaning}>{card.meaning}</Text>
-                          <Text style={s.cardHint}>Tap to reveal word</Text>
-                        </>
-                      ) : (
-                        <>
-                          <Text style={s.cardWord}>{card.word}</Text>
-                          <Text style={s.cardHint}>Tap to reveal meaning</Text>
-                        </>
-                      )}
+                      <View style={{ flex: 1, width: '100%' }} onLayout={(e) => setFrontContainerHeight(e.nativeEvent.layout.height)}>
+                        <ScrollView
+                          ref={frontScrollRef}
+                          style={{ flex: 1, width: '100%' }}
+                          contentContainerStyle={s.cardScrollContent}
+                          showsVerticalScrollIndicator={false}
+                          onContentSizeChange={(w, h) => setFrontContentHeight(h)}
+                          onScroll={(e) => setFrontScrollY(e.nativeEvent.contentOffset.y)}
+                          scrollEventThrottle={16}
+                        >
+                          {isMeaningToWord ? (
+                            <Text style={s.cardPromptMeaning}>{card.meaning}</Text>
+                          ) : (
+                            <Text style={s.cardWord}>{card.word}</Text>
+                          )}
+                        </ScrollView>
+                      </View>
+                      <Text style={s.cardHint}>
+                        {isMeaningToWord ? 'Tap to reveal word' : 'Tap to reveal meaning'}
+                      </Text>
                     </Animated.View>
 
                     {/* BACK */}
                     <Animated.View style={[s.cardFace, s.cardBack, backAnimatedStyle]}>
-                      {isMeaningToWord ? (
-                        <>
-                          <Text style={s.cardWord}>{card.word}</Text>
-                          <Text style={[s.cardHint, { marginTop: 8 }]}>{card.meaning}</Text>
-                        </>
-                      ) : (
-                        <>
-                          <Text style={s.cardMeaning}>{card.meaning}</Text>
-                          <Text style={[s.cardHint, { marginTop: 8 }]}>{card.word}</Text>
-                        </>
-                      )}
+                      <View style={{ flex: 1, width: '100%' }} onLayout={(e) => setBackContainerHeight(e.nativeEvent.layout.height)}>
+                        <ScrollView
+                          ref={backScrollRef}
+                          style={{ flex: 1, width: '100%' }}
+                          contentContainerStyle={s.cardScrollContent}
+                          showsVerticalScrollIndicator={false}
+                          onContentSizeChange={(w, h) => setBackContentHeight(h)}
+                          onScroll={(e) => setBackScrollY(e.nativeEvent.contentOffset.y)}
+                          scrollEventThrottle={16}
+                        >
+                          {isMeaningToWord ? (
+                            <>
+                              <Text style={s.cardWord}>{card.word}</Text>
+                              <Text style={[s.cardMeaning, { marginTop: 12 }]}>{card.meaning}</Text>
+                            </>
+                          ) : (
+                            <>
+                              <Text style={s.cardMeaning}>{card.meaning}</Text>
+                              <Text style={[s.cardHint, { marginTop: 12 }]}>{card.word}</Text>
+                            </>
+                          )}
+                        </ScrollView>
+                      </View>
                     </Animated.View>
                   </AnimatedPressable>
                 );
@@ -464,6 +522,27 @@ export default function ReviewScreen() {
                 </View>
               );
             })}
+
+            {/* Dynamic side scroll pill with explicit UP and DOWN buttons */}
+            {currentOverflowing && (
+              <View style={s.sideScrollPill}>
+                <AnimatedPressable
+                  onPress={handleScrollUp}
+                  style={s.sideScrollPillBtn}
+                  activeOpacity={0.7}
+                >
+                  <ChevronUp size={18} color={COLORS.charcoal} strokeWidth={2.5} />
+                </AnimatedPressable>
+                <View style={s.sideScrollDivider} />
+                <AnimatedPressable
+                  onPress={handleScrollDown}
+                  style={s.sideScrollPillBtn}
+                  activeOpacity={0.7}
+                >
+                  <ChevronDown size={18} color={COLORS.charcoal} strokeWidth={2.5} />
+                </AnimatedPressable>
+              </View>
+            )}
           </View>
         </View>
 
@@ -808,7 +887,42 @@ const getStyles = (COLORS: any) =>
       borderRadius: 24,
       justifyContent: 'center',
       alignItems: 'center',
-      padding: 24,
+      padding: 16,
+    },
+    cardScrollContent: {
+      flexGrow: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: 4,
+      paddingVertical: 8,
+    },
+    sideScrollPill: {
+      position: 'absolute',
+      right: -16,
+      top: '36%',
+      width: 36,
+      borderRadius: 18,
+      backgroundColor: COLORS.white,
+      borderWidth: 1,
+      borderColor: COLORS.bone,
+      alignItems: 'center',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.12,
+      shadowRadius: 6,
+      elevation: 6,
+      zIndex: 40,
+    },
+    sideScrollPillBtn: {
+      width: 36,
+      height: 34,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    sideScrollDivider: {
+      width: 20,
+      height: 1,
+      backgroundColor: COLORS.bone,
     },
     cardFront: {
       backgroundColor: COLORS.white,
