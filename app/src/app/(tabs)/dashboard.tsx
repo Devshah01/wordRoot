@@ -54,6 +54,8 @@ export default function DashboardScreen() {
   const COLORS = isDarkMode ? APP_COLORS.dark : APP_COLORS.light;
   const s = React.useMemo(() => getStyles(COLORS, isDarkMode), [COLORS, isDarkMode]);
 
+
+
   const bellAnim = useSharedValue(SCREEN_WIDTH);
   const animatedBellStyle = useAnimatedStyle(() => {
     return {
@@ -385,8 +387,11 @@ export default function DashboardScreen() {
             <Text style={s.greetingLabel}>{randomQuote}</Text>
           </View>
           <View>
-            <View style={s.headerRow2}>
-              <Text style={s.displayNameText}>{displayName} 👋</Text>
+              <View style={s.headerRow2}>
+                <View style={s.nameContainer}>
+                  <Text style={s.displayNameText}>{displayName}</Text>
+                  <Text style={s.emojiText}> 👋</Text>
+                </View>
               <View style={s.headerIcons}>
                 <AnimatedPressable onPress={() => setIsSearchActive(true)} style={s.iconBtn}>
                   <Search size={24} color={COLORS.charcoal} strokeWidth={2.5} />
@@ -729,8 +734,16 @@ const getStyles = (COLORS: any, isDarkMode: boolean) => StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  nameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   displayNameText: {
     fontFamily: 'Outfit_700Bold',
+    fontSize: 24,
+    color: COLORS.charcoal,
+  },
+  emojiText: {
     fontSize: 24,
     color: COLORS.charcoal,
   },
