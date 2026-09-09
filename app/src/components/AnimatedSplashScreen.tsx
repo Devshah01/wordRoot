@@ -10,11 +10,11 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Polygon, G } from 'react-native-svg';
 
+import { Asset } from 'expo-asset';
 import {
-  useAudioPlayer,
+  createAudioPlayer,
   setAudioModeAsync,
   setIsAudioActiveAsync,
-  preload,
   type AudioPlayer,
 } from 'expo-audio';
 
@@ -23,29 +23,26 @@ import { useAppStore } from '../store/useAppStore';
 
 const SPIN_SOUND = require('../../assets/sounds/spin.mp3');
 
-// Preload audio at module level for instant playback
-try {
-  preload(SPIN_SOUND);
-} catch {}
-
 const waitForPlayerReady = async (player: AudioPlayer, timeoutMs = 4000) => {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    try {
-      if (player.isLoaded) return true;
-    } catch {}
+    if (player.isLoaded) return true;
     await new Promise((resolve) => setTimeout(resolve, 50));
   }
-  try {
-    return player.isLoaded;
-  } catch {
-    return false;
-  }
+  return player.isLoaded;
+};
+
+const releasePlayer = (player: AudioPlayer | null) => {
+  if (!player) return;
+  try { player.pause(); } catch {}
+  try { player.release(); } catch {}
 };
 
 const AnimatedSvg = Animated.createAnimatedComponent(Svg);
 
 const SPLASH_DURATION_MS = 4200;
+
+
 
 export default function AnimatedSplashScreen({ onAnimationFinish }: { onAnimationFinish: () => void }) {
   const isDarkMode = useAppStore((s) => s.isDarkMode);
@@ -54,28 +51,27 @@ export default function AnimatedSplashScreen({ onAnimationFinish }: { onAnimatio
   const rotation = useSharedValue(720);
   const textProgress = useSharedValue(0);
 
-  const spinPlayer = useAudioPlayer(SPIN_SOUND);
+  const audioStopped = useRef(false);
+  const spinPlayerRef = useRef<AudioPlayer | null>(null);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const stopSplashAudio = () => {
+    if (audioStopped.current) return;
+    audioStopped.current = true;
+
+    timersRef.current.forEach(clearTimeout);
+    timersRef.current = [];
+
+    releasePlayer(spinPlayerRef.current);
+    spinPlayerRef.current = null;
+  };
+
+
 
   useEffect(() => {
     let cancelled = false;
 
-    // Start Visual Animations IMMEDIATELY so splash isn't delayed
-    rotation.value = withTiming(0, {
-      duration: 1000,
-      easing: Easing.bezier(0.1, 1, 0.2, 1),
-    });
-
-    textProgress.value = withDelay(1000, withTiming(8, { duration: 1500, easing: Easing.linear }));
-
-    const finishTimer = setTimeout(() => {
-      if (cancelled) return;
-      onAnimationFinish();
-    }, SPLASH_DURATION_MS);
-    timersRef.current.push(finishTimer);
-
-    // Prepare and Play Audio Asynchronously
-    const startAudio = async () => {
+    const startSplashAudio = async () => {
       try {
         await setIsAudioActiveAsync(true);
         await setAudioModeAsync({
@@ -84,35 +80,54 @@ export default function AnimatedSplashScreen({ onAnimationFinish }: { onAnimatio
           shouldPlayInBackground: false,
         });
 
-        if (cancelled) return;
+        const spinAsset = await Asset.fromModule(SPIN_SOUND).downloadAsync();
 
-        const isReady = spinPlayer.isLoaded || (await waitForPlayerReady(spinPlayer));
-        if (!isReady || cancelled) return;
+        if (cancelled || audioStopped.current) return;
 
+        const spinPlayer = createAudioPlayer({ uri: spinAsset.localUri ?? spinAsset.uri });
+        
+        spinPlayerRef.current = spinPlayer;
         spinPlayer.volume = 1;
-        try { await spinPlayer.seekTo(0); } catch {}
-        try { spinPlayer.play(); } catch {}
+
+        await waitForPlayerReady(spinPlayer);
+        
+        if (cancelled || audioStopped.current) return;
+
+        await spinPlayer.seekTo(0);
+        spinPlayer.play();
 
         const spinStopTimer = setTimeout(() => {
-          if (cancelled) return;
-          try {
-            if (spinPlayer.isLoaded) {
-              spinPlayer.pause();
-            }
-          } catch {}
+          if (cancelled || audioStopped.current) return;
+          try { spinPlayer.pause(); } catch {}
         }, 1000);
         timersRef.current.push(spinStopTimer);
-      } catch (err) {
-        // Non-fatal audio setup warning
+
+        // ---- Start Visuals In Sync With Audio ----
+        rotation.value = withTiming(0, {
+          duration: 1000,
+          easing: Easing.bezier(0.1, 1, 0.2, 1),
+        });
+
+        textProgress.value = withDelay(1000, withTiming(8, { duration: 1500, easing: Easing.linear }));
+
+        const finishTimer = setTimeout(() => {
+          if (cancelled) return;
+          stopSplashAudio();
+          onAnimationFinish();
+        }, SPLASH_DURATION_MS);
+        timersRef.current.push(finishTimer);
+
+      } catch (error) {
+        console.warn('[splash] audio setup failed', error);
+        if (!cancelled) onAnimationFinish();
       }
     };
 
-    startAudio();
+    startSplashAudio();
 
     return () => {
       cancelled = true;
-      timersRef.current.forEach(clearTimeout);
-      timersRef.current = [];
+      stopSplashAudio();
     };
   }, [onAnimationFinish]);
 
