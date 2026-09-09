@@ -48,6 +48,7 @@ export default function DashboardScreen() {
     isDarkMode,
     draftVocabLines: vocabLines,
     setDraftVocabLines: setVocabLines,
+    resetDraftVocabLines,
     setIsTabBarHidden,
   } = useAppStore();
 
@@ -328,7 +329,7 @@ export default function DashboardScreen() {
         });
       }
 
-      setVocabLines(Array(5).fill(null).map(() => ({ word: '', meaning: '' })));
+      resetDraftVocabLines();
       setEditedSavedWords([]);
       setErrorMessage(null);
       setIsVocabCardExpanded(false);

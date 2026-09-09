@@ -33,7 +33,7 @@ export default function CalendarScreen() {
   const insets = useSafeAreaInsets();
 
   const { focusDate } = useLocalSearchParams<{ focusDate?: string }>();
-  const { words, loadLocalDatabase, isDarkMode, draftVocabLines } = useAppStore();
+  const { words, loadLocalDatabase, isDarkMode, draftVocabLines, resetDraftVocabLines } = useAppStore();
 
   const COLORS = isDarkMode ? APP_COLORS.dark : APP_COLORS.light;
   const THEME_COLORS = useMemo(() => ({ ...COLORS, gridLine: isDarkMode ? '#2A2A2A' : '#EDEDEB' }), [COLORS, isDarkMode]);
@@ -265,6 +265,7 @@ export default function CalendarScreen() {
 
       setCalendarDrafts([{ word: '', meaning: '' }]);
       setCalendarEditedWords([]);
+      resetDraftVocabLines();
       setErrorMessage(null);
       setIsEditorOpen(false);
       await loadLocalDatabase();

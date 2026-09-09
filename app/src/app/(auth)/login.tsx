@@ -27,7 +27,7 @@ GoogleSignin.configure({
 
 
 export default function AuthScreen() {
-  const { setAuth, loadLocalDatabase, draftVocabLines, setDraftVocabLines, isDarkMode } = useAppStore();
+  const { setAuth, loadLocalDatabase, draftVocabLines, resetDraftVocabLines, isDarkMode } = useAppStore();
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -43,12 +43,11 @@ export default function AuthScreen() {
   const runPostAuthSync = useCallback(() => {
     performCloudSync({
       draftVocabLines,
-      clearDrafts: () =>
-        setDraftVocabLines(Array(5).fill(null).map(() => ({ word: '', meaning: '' }))),
+      clearDrafts: resetDraftVocabLines,
     })
       .then(() => loadLocalDatabase())
       .catch((e) => console.warn('Background cloud sync failed', e));
-  }, [draftVocabLines, loadLocalDatabase, setDraftVocabLines]);
+  }, [draftVocabLines, loadLocalDatabase, resetDraftVocabLines]);
 
   const handleGoogleToken = useCallback(async (idToken?: string) => {
     if (!idToken || typeof idToken !== 'string') {

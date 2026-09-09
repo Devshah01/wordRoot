@@ -79,6 +79,7 @@ interface AppState {
   setIsTabBarHidden: (hidden: boolean) => void;
   setIsDarkMode: (isDark: boolean) => Promise<void>;
   setDraftVocabLines: (lines: LocalWord[]) => void;
+  resetDraftVocabLines: () => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -192,5 +193,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ isDarkMode: isDark });
   },
   
-  setDraftVocabLines: (lines) => set({ draftVocabLines: lines })
+  setDraftVocabLines: (lines) => set({ draftVocabLines: lines }),
+  resetDraftVocabLines: () =>
+    set({ draftVocabLines: Array(5).fill(null).map(() => ({ word: '', meaning: '' })) }),
 }));
