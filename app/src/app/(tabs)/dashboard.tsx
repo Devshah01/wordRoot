@@ -1,5 +1,3 @@
-/* eslint-disable react-hooks/immutability */
-/* eslint-disable react-hooks/set-state-in-effect */
 /* eslint-disable react/no-unescaped-entities */
 import React, { useState, useEffect } from 'react';
 import {
@@ -572,9 +570,11 @@ export default function DashboardScreen() {
                               style={s.wordInputSaved}
                               value={word.word}
                               onChangeText={(val) => {
-                                const newArr = [...editedSavedWords];
-                                newArr[index].word = val;
-                                setEditedSavedWords(newArr);
+                                setEditedSavedWords(prev =>
+                                  prev.map((item, i) =>
+                                    i === index ? { ...item, word: val } : item
+                                  )
+                                );
                               }}
                               autoCapitalize="none"
                             />
@@ -589,9 +589,11 @@ export default function DashboardScreen() {
                             style={s.meaningInputSaved}
                             value={word.meaning}
                             onChangeText={(val) => {
-                              const newArr = [...editedSavedWords];
-                              newArr[index].meaning = val;
-                              setEditedSavedWords(newArr);
+                              setEditedSavedWords(prev =>
+                                prev.map((item, i) =>
+                                  i === index ? { ...item, meaning: val } : item
+                                )
+                              );
                             }}
                             multiline={true}
                             textAlignVertical="top"

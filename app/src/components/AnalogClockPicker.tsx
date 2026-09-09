@@ -1,7 +1,4 @@
-/* eslint-disable react-hooks/immutability */
-/* eslint-disable react-hooks/exhaustive-deps */
-/* eslint-disable react-hooks/set-state-in-effect */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import AnimatedPressable from './AnimatedPressable';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
@@ -44,6 +41,19 @@ export default function AnalogClockPicker({
   const [displayHour, setDisplayHour] = useState(initial12Hour === 0 ? 12 : initial12Hour);
   const [displayMinute, setDisplayMinute] = useState(initMin);
 
+  // Refs that always hold the latest state values.
+  // updateHour / updateMinute are called via runOnJS from inside a Reanimated
+  // gesture which captures those functions only once at gesture-creation time.
+  // Without refs the closures would read stale state (e.g. the minute value
+  // from when the gesture was first built, not the current value).
+  const displayHourRef = useRef(initial12Hour === 0 ? 12 : initial12Hour);
+  const displayMinuteRef = useRef(initMin);
+  const isPMRef = useRef(initialIsPM);
+
+  useEffect(() => { displayHourRef.current = displayHour; }, [displayHour]);
+  useEffect(() => { displayMinuteRef.current = displayMinute; }, [displayMinute]);
+  useEffect(() => { isPMRef.current = isPM; }, [isPM]);
+
   const [mode, setMode] = useState<'hour' | 'minute'>('hour');
   const activeMode = useSharedValue<'hour' | 'minute'>('hour');
 
@@ -66,7 +76,7 @@ export default function AnalogClockPicker({
     setDisplayMinute(m);
     hourAngle.value = (h12 % 12) * 30;
     minuteAngle.value = m * 6;
-  }, [initialTime]);
+  }, [initialTime]); // hourAngle / minuteAngle are stable Reanimated shared values — intentionally omitted
 
   const handleSetMode = (m: 'hour' | 'minute') => {
     setMode(m);
@@ -82,19 +92,22 @@ export default function AnalogClockPicker({
     onTimeChange(formatted);
   };
 
+  // Read from refs so that even when called via runOnJS from a gesture
+  // (which captured these functions at creation time), we always use the
+  // current hour/minute/AM-PM values — not stale closure values.
   const updateHour = (h: number) => {
     setDisplayHour(h);
-    syncTime(h, displayMinute, isPM);
+    syncTime(h, displayMinuteRef.current, isPMRef.current);
   };
 
   const updateMinute = (m: number) => {
     setDisplayMinute(m);
-    syncTime(displayHour, m, isPM);
+    syncTime(displayHourRef.current, m, isPMRef.current);
   };
 
   const handleToggleAMPM = (newIsPM: boolean) => {
     setIsPM(newIsPM);
-    syncTime(displayHour, displayMinute, newIsPM);
+    syncTime(displayHourRef.current, displayMinuteRef.current, newIsPM);
   };
 
   const panGesture = Gesture.Pan()

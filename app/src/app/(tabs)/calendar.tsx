@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/set-state-in-effect */
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
@@ -561,9 +560,11 @@ export default function CalendarScreen() {
                               style={s.wordInputSaved}
                               value={word.word}
                               onChangeText={(val) => {
-                                const newArr = [...calendarEditedWords];
-                                newArr[index].word = val;
-                                setCalendarEditedWords(newArr);
+                                setCalendarEditedWords(prev =>
+                                  prev.map((item, i) =>
+                                    i === index ? { ...item, word: val } : item
+                                  )
+                                );
                               }}
                               autoCapitalize="none"
                             />
@@ -578,9 +579,11 @@ export default function CalendarScreen() {
                             style={s.meaningInputSaved}
                             value={word.meaning}
                             onChangeText={(val) => {
-                              const newArr = [...calendarEditedWords];
-                              newArr[index].meaning = val;
-                              setCalendarEditedWords(newArr);
+                              setCalendarEditedWords(prev =>
+                                prev.map((item, i) =>
+                                  i === index ? { ...item, meaning: val } : item
+                                )
+                              );
                             }}
                             multiline={true}
                             textAlignVertical="top"
