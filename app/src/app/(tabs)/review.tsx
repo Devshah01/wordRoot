@@ -42,6 +42,23 @@ export default function ReviewScreen() {
     return ((word.reviewCount || 0) % 2) === 1;
   }, []);
 
+  const getMeaningDynamicStyle = useCallback((text: string) => {
+    const trimmed = text.trim();
+    const len = trimmed.length;
+    const isMultiLine = trimmed.includes('\n') || len > 40;
+
+    if (len > 120 || (trimmed.includes('\n') && len > 60)) {
+      return { fontSize: 16, lineHeight: 24 };
+    }
+    if (isMultiLine) {
+      return { fontSize: 18, lineHeight: 26 };
+    }
+    if (len > 25) {
+      return { fontSize: 22, lineHeight: 30 };
+    }
+    return { fontSize: 26, lineHeight: 34 };
+  }, []);
+
   // Active review session state
   const [sessionWords, setSessionWords] = useState<Word[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -452,7 +469,7 @@ export default function ReviewScreen() {
                           scrollEventThrottle={16}
                         >
                           {isMeaningToWord ? (
-                            <Text style={s.cardPromptMeaning}>{card.meaning}</Text>
+                            <Text style={[s.cardPromptMeaning, getMeaningDynamicStyle(card.meaning)]}>{card.meaning}</Text>
                           ) : (
                             <Text style={s.cardWord}>{card.word}</Text>
                           )}
@@ -478,12 +495,12 @@ export default function ReviewScreen() {
                           {isMeaningToWord ? (
                             <>
                               <Text style={s.cardWord}>{card.word}</Text>
-                              <Text style={[s.cardMeaning, { marginTop: 12 }]}>{card.meaning}</Text>
+                              <Text style={[s.cardSubText, { marginTop: 12 }]}>{card.meaning}</Text>
                             </>
                           ) : (
                             <>
-                              <Text style={s.cardMeaning}>{card.meaning}</Text>
-                              <Text style={[s.cardHint, { marginTop: 12 }]}>{card.word}</Text>
+                              <Text style={[s.cardMeaningMain, getMeaningDynamicStyle(card.meaning)]}>{card.meaning}</Text>
+                              <Text style={[s.cardSubText, { marginTop: 12 }]}>{card.word}</Text>
                             </>
                           )}
                         </ScrollView>
@@ -941,9 +958,13 @@ const getStyles = (COLORS: any) =>
     },
     cardWord: {
       fontFamily: 'Outfit_700Bold',
-      fontSize: 32,
+      fontSize: 28,
       color: COLORS.charcoal,
-      textTransform: 'capitalize',
+      textAlign: 'center',
+    },
+    cardMeaningMain: {
+      fontFamily: 'Outfit_700Bold',
+      color: COLORS.charcoal,
       textAlign: 'center',
     },
     cardMeaning: {
@@ -952,6 +973,14 @@ const getStyles = (COLORS: any) =>
       color: COLORS.charcoal,
       textAlign: 'center',
       lineHeight: 32,
+    },
+    cardSubText: {
+      fontFamily: 'Inter_400Regular',
+      fontSize: 13,
+      color: COLORS.warmgray,
+      textAlign: 'center',
+      opacity: 0.7,
+      lineHeight: 18,
     },
     cardPromptMeaning: {
       fontFamily: 'Outfit_600SemiBold',
