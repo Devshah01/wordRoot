@@ -32,20 +32,10 @@ const waitForPlayerReady = async (player: AudioPlayer, timeoutMs = 4000) => {
   return player.isLoaded;
 };
 
-const releasePlayer = async (player: AudioPlayer | null) => {
+const releasePlayer = (player: AudioPlayer | null) => {
   if (!player) return;
-  try {
-    if (player.isLoaded) {
-      try { player.pause(); } catch {}
-      try { player.release(); } catch {}
-      return;
-    }
-    const isReady = await waitForPlayerReady(player, 2000);
-    if (isReady && player.isLoaded) {
-      try { player.pause(); } catch {}
-      try { player.release(); } catch {}
-    }
-  } catch {}
+  try { player.pause(); } catch {}
+  try { player.release(); } catch {}
 };
 
 const AnimatedSvg = Animated.createAnimatedComponent(Svg);
@@ -72,11 +62,8 @@ export default function AnimatedSplashScreen({ onAnimationFinish }: { onAnimatio
     timersRef.current.forEach(clearTimeout);
     timersRef.current = [];
 
-    const playerToRelease = spinPlayerRef.current;
+    releasePlayer(spinPlayerRef.current);
     spinPlayerRef.current = null;
-    if (playerToRelease) {
-      releasePlayer(playerToRelease);
-    }
   };
 
 
@@ -104,22 +91,14 @@ export default function AnimatedSplashScreen({ onAnimationFinish }: { onAnimatio
 
         await waitForPlayerReady(spinPlayer);
         
-        if (cancelled || audioStopped.current) {
-          releasePlayer(spinPlayer);
-          spinPlayerRef.current = null;
-          return;
-        }
+        if (cancelled || audioStopped.current) return;
 
-        if (spinPlayer.isLoaded) {
-          try { await spinPlayer.seekTo(0); } catch {}
-          try { spinPlayer.play(); } catch {}
-        }
+        await spinPlayer.seekTo(0);
+        spinPlayer.play();
 
         const spinStopTimer = setTimeout(() => {
           if (cancelled || audioStopped.current) return;
-          if (spinPlayer.isLoaded) {
-            try { spinPlayer.pause(); } catch {}
-          }
+          try { spinPlayer.pause(); } catch {}
         }, 1000);
         timersRef.current.push(spinStopTimer);
 
