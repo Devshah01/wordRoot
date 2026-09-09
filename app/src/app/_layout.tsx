@@ -19,9 +19,8 @@ import { Geist_700Bold } from '@expo-google-fonts/geist';
 import * as SplashScreen from 'expo-splash-screen';
 import { useAppStore } from '../store/useAppStore';
 import AnimatedSplashScreen from '../components/AnimatedSplashScreen';
-import { useLocalNotifications } from '../hooks/useLocalNotifications';
+import { useLocalNotifications, requestNotificationPermissions } from '../hooks/useLocalNotifications';
 import { initSyncListener } from '../services/sync';
-
 
 LogBox.ignoreLogs([
   'SafeAreaView has been deprecated',
@@ -46,10 +45,18 @@ export default function RootLayout() {
 
   const checkFirstLaunch = useAppStore(state => state.checkFirstLaunch);
   const isDarkMode = useAppStore(state => state.isDarkMode);
+  const hasCompletedOnboarding = useAppStore(state => state.hasCompletedOnboarding);
   const [isSplashAnimationComplete, setSplashAnimationComplete] = useState(false);
 
   // Local daily reminder notifications (offline — no server push)
   useLocalNotifications();
+
+  const handleSplashFinish = async () => {
+    setSplashAnimationComplete(true);
+    if (hasCompletedOnboarding) {
+      await requestNotificationPermissions();
+    }
+  };
 
   useEffect(() => {
     // Push pending sync queue when back online (logged-in users only)
@@ -87,7 +94,7 @@ export default function RootLayout() {
 
       {!isSplashAnimationComplete && (
         <View style={[StyleSheet.absoluteFill, { zIndex: 9999 }]}>
-          <AnimatedSplashScreen onAnimationFinish={() => setSplashAnimationComplete(true)} />
+          <AnimatedSplashScreen onAnimationFinish={handleSplashFinish} />
         </View>
       )}
     </GestureHandlerRootView>

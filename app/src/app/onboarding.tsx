@@ -15,6 +15,7 @@ import { router } from 'expo-router';
 import { User, Sparkles, ArrowRight, X } from 'lucide-react-native';
 import { useAppStore } from '../store/useAppStore';
 import { APP_COLORS } from '../constants/theme';
+import { requestNotificationPermissions } from '../hooks/useLocalNotifications';
 
 export default function OnboardingScreen() {
   const { isDarkMode, setGuestName, setHasCompletedOnboarding } = useAppStore();
@@ -48,6 +49,7 @@ export default function OnboardingScreen() {
     const finalName = name.trim() || 'Explorer';
     await setGuestName(finalName);
     await setHasCompletedOnboarding(true);
+    await requestNotificationPermissions();
     router.replace('/(tabs)/dashboard');
   };
 

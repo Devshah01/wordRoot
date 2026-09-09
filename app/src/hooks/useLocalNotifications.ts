@@ -76,7 +76,7 @@ export function useLocalNotifications() {
   useEffect(() => {
     if (isExpoGo || !Notifications) return;
 
-    requestPermissionsAsync().then((granted) => {
+    requestNotificationPermissions().then((granted) => {
       if (granted) {
         scheduleDailyReminder();
       }
@@ -116,19 +116,19 @@ function parseNotificationTime(rawTime?: string | null): { hours: number; minute
   return defaultTime;
 }
 
-async function requestPermissionsAsync() {
+export async function requestNotificationPermissions() {
   if (isExpoGo || !Notifications) return false;
 
-  if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync('default', {
-      name: 'default',
-      importance: Notifications.AndroidImportance.MAX,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#FF231F7C',
-    });
-  }
+  try {
+    if (Platform.OS === 'android') {
+      await Notifications.setNotificationChannelAsync('default', {
+        name: 'default',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#FF231F7C',
+      });
+    }
 
-  if (Device.isDevice) {
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
     if (existingStatus !== 'granted') {
@@ -140,7 +140,8 @@ async function requestPermissionsAsync() {
       return false;
     }
     return true;
+  } catch (e) {
+    console.log('Error requesting notification permissions:', e);
+    return false;
   }
-
-  return false;
 }
