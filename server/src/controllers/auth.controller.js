@@ -35,33 +35,9 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Helper to sign access token (15m expiration)
-function generateAccessToken(user) {
-  return jwt.sign({ id: user.id, email: user.email }, getJwtSecret(), { expiresIn: '15m' });
-}
-
-// Helper to generate cryptographically secure random refresh token string
-function generateRefreshTokenString() {
-  return crypto.randomBytes(40).toString('hex');
-}
-
-// Issue access token + refresh token and persist refresh token in DB
-async function issueTokenPair(user) {
-  const accessToken = generateAccessToken(user);
-  const refreshToken = generateRefreshTokenString();
-  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
-
-  await prisma.refreshToken.create({
-    data: {
-      token: refreshToken,
-      expiresAt,
-      user: {
-        connect: { id: user.id },
-      },
-    },
-  });
-
-  return { accessToken, refreshToken };
+// Helper to sign JWT
+function generateToken(user) {
+  return jwt.sign({ id: user.id, email: user.email }, getJwtSecret(), { expiresIn: '30d' });
 }
 
 // 1. Manual Signup
@@ -114,10 +90,9 @@ async function register(req, res) {
       },
     });
 
-    const { accessToken, refreshToken } = await issueTokenPair(user);
+    const token = generateToken(user);
     res.status(201).json({
-      accessToken,
-      refreshToken,
+      token,
       user: { id: user.id, username: user.username, email: user.email },
     });
   } catch (error) {
@@ -155,10 +130,9 @@ async function login(req, res) {
       return res.status(400).json({ error: 'Invalid email or password' });
     }
 
-    const { accessToken, refreshToken } = await issueTokenPair(user);
+    const token = generateToken(user);
     res.json({
-      accessToken,
-      refreshToken,
+      token,
       user: { id: user.id, username: user.username, email: user.email },
     });
   } catch (error) {
@@ -233,10 +207,9 @@ async function googleAuth(req, res) {
       return res.status(500).json({ error: 'Failed to authenticate user' });
     }
 
-    const { accessToken, refreshToken } = await issueTokenPair(user);
+    const token = generateToken(user);
     res.json({
-      accessToken,
-      refreshToken,
+      token,
       user: { id: user.id, username: user.username, email: user.email },
     });
   } catch (error) {
@@ -378,17 +351,10 @@ async function resetPassword(req, res) {
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(newPassword, salt);
 
-    const user = await prisma.user.update({
+    await prisma.user.update({
       where: { email: normalizedEmail },
       data: { passwordHash },
     });
-
-    // Revoke all existing refresh tokens for this user on password reset
-    if (user) {
-      await prisma.refreshToken.deleteMany({
-        where: { userId: user.id },
-      }).catch(() => {});
-    }
 
     // Remove used code from database
     await prisma.passwordReset.delete({
@@ -399,60 +365,6 @@ async function resetPassword(req, res) {
   } catch (error) {
     console.error('Reset password error:', error);
     res.status(500).json({ error: 'Failed to reset password' });
-  }
-}
-
-// 6. Refresh Access Token
-async function refreshToken(req, res) {
-  try {
-    const { refreshToken: reqRefreshToken } = req.body;
-
-    if (!reqRefreshToken || typeof reqRefreshToken !== 'string') {
-      return res.status(400).json({ error: 'Refresh token is required', code: 'REFRESH_TOKEN_MISSING' });
-    }
-
-    const savedToken = await prisma.refreshToken.findUnique({
-      where: { token: reqRefreshToken },
-      include: { user: true },
-    });
-
-    if (!savedToken) {
-      return res.status(401).json({ error: 'Invalid or revoked refresh token', code: 'REFRESH_TOKEN_INVALID' });
-    }
-
-    if (new Date() > savedToken.expiresAt) {
-      await prisma.refreshToken.delete({ where: { id: savedToken.id } }).catch(() => {});
-      return res.status(401).json({ error: 'Refresh token expired', code: 'REFRESH_TOKEN_EXPIRED' });
-    }
-
-    const user = savedToken.user;
-    if (!user) {
-      return res.status(401).json({ error: 'User no longer exists', code: 'USER_NOT_FOUND' });
-    }
-
-    const accessToken = generateAccessToken(user);
-    res.json({ accessToken });
-  } catch (error) {
-    console.error('Refresh token error:', error);
-    res.status(500).json({ error: 'Failed to refresh token' });
-  }
-}
-
-// 7. Logout (Revoke Refresh Token)
-async function logout(req, res) {
-  try {
-    const { refreshToken: reqRefreshToken } = req.body;
-
-    if (reqRefreshToken && typeof reqRefreshToken === 'string') {
-      await prisma.refreshToken.delete({
-        where: { token: reqRefreshToken },
-      }).catch(() => {});
-    }
-
-    res.json({ message: 'Logged out successfully' });
-  } catch (error) {
-    console.error('Logout error:', error);
-    res.status(500).json({ error: 'Failed to log out' });
   }
 }
 
@@ -468,11 +380,10 @@ async function deleteAccount(req, res) {
       return res.status(404).json({ error: 'User account not found' });
     }
 
-    // Atomically delete associated words, password reset codes, refresh tokens, and the user record
+    // Atomically delete associated words, password reset codes, and the user record
     await prisma.$transaction([
       prisma.word.deleteMany({ where: { userId } }),
       prisma.passwordReset.deleteMany({ where: { email: user.email } }),
-      prisma.refreshToken.deleteMany({ where: { userId } }),
       prisma.user.delete({ where: { id: userId } }),
     ]);
 
@@ -493,7 +404,5 @@ module.exports = {
   googleAuth,
   forgotPassword,
   resetPassword,
-  refreshToken,
-  logout,
   deleteAccount,
 };

@@ -22,42 +22,7 @@ function getBaseUrl(): string {
 
 const BASE_URL = getBaseUrl();
 
-let isRefreshing = false;
-let refreshPromise: Promise<string | null> | null = null;
-
-async function performTokenRefresh(): Promise<string | null> {
-  const refreshToken = useAppStore.getState().refreshToken;
-  if (!refreshToken) {
-    await useAppStore.getState().clearAuth();
-    return null;
-  }
-
-  try {
-    const res = await fetch(`${BASE_URL}/api/auth/refresh`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken }),
-    });
-
-    if (!res.ok) {
-      await useAppStore.getState().clearAuth();
-      return null;
-    }
-
-    const data = await res.json();
-    if (data.accessToken) {
-      await useAppStore.getState().setAccessToken(data.accessToken);
-      return data.accessToken;
-    } else {
-      await useAppStore.getState().clearAuth();
-      return null;
-    }
-  } catch {
-    return null;
-  }
-}
-
-async function request(endpoint: string, options: RequestInit = {}, isRetry: boolean = false): Promise<any> {
+async function request(endpoint: string, options: RequestInit = {}) {
   const token = useAppStore.getState().token;
 
   const headers = new Headers(options.headers || {});
@@ -84,29 +49,6 @@ async function request(endpoint: string, options: RequestInit = {}, isRetry: boo
     data = { error: text };
   }
 
-  // Auto-refresh access token on 401 response from server
-  if (
-    response.status === 401 &&
-    !isRetry &&
-    !endpoint.startsWith('/api/auth/login') &&
-    !endpoint.startsWith('/api/auth/register') &&
-    !endpoint.startsWith('/api/auth/refresh')
-  ) {
-    if (!isRefreshing) {
-      isRefreshing = true;
-      refreshPromise = performTokenRefresh().finally(() => {
-        isRefreshing = false;
-        refreshPromise = null;
-      });
-    }
-
-    const newAccessToken = await refreshPromise;
-    if (newAccessToken) {
-      // Retry original request with the updated access token
-      return request(endpoint, options, true);
-    }
-  }
-
   if (!response.ok) {
     let msg = data.error || data.message;
     // If the server returned an HTML error page (e.g. 404/502), show a friendly message
@@ -127,10 +69,6 @@ export const api = {
       request('/api/auth/login', { method: 'POST', body: JSON.stringify(body) }),
     google: (body: any) =>
       request('/api/auth/google', { method: 'POST', body: JSON.stringify(body) }),
-    refresh: (refreshToken: string) =>
-      request('/api/auth/refresh', { method: 'POST', body: JSON.stringify({ refreshToken }) }),
-    logout: (refreshToken?: string | null) =>
-      request('/api/auth/logout', { method: 'POST', body: JSON.stringify({ refreshToken }) }),
     forgotPassword: (body: { email: string }) =>
       request('/api/auth/forgot-password', { method: 'POST', body: JSON.stringify(body) }),
     resetPassword: (body: { email: string; code: string; newPassword: string }) =>

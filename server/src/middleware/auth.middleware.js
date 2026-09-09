@@ -15,7 +15,7 @@ async function authenticateToken(req, res, next) {
   const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
-    return res.status(401).json({ error: 'Access token missing', code: 'TOKEN_MISSING' });
+    return res.status(401).json({ error: 'Access token missing' });
   }
 
   try {
@@ -29,7 +29,7 @@ async function authenticateToken(req, res, next) {
     });
 
     if (!user) {
-      return res.status(401).json({ error: 'User account no longer exists', code: 'USER_NOT_FOUND' });
+      return res.status(401).json({ error: 'User account no longer exists' });
     }
 
     req.user = user;
@@ -39,10 +39,7 @@ async function authenticateToken(req, res, next) {
       console.error("FATAL ERROR: JWT_SECRET is not defined in environment variables.");
       return res.status(500).json({ error: 'Internal server configuration error' });
     }
-    if (err.name === 'TokenExpiredError') {
-      return res.status(401).json({ error: 'Access token expired', code: 'TOKEN_EXPIRED' });
-    }
-    return res.status(401).json({ error: 'Invalid or expired token', code: 'TOKEN_INVALID' });
+    return res.status(403).json({ error: 'Invalid or expired token' });
   }
 }
 
