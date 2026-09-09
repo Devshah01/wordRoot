@@ -383,7 +383,7 @@ export default function ProfileScreen() {
                   <Text style={[s.sectionTitle, { color: COLORS.charcoal, marginTop: 28 }]}>About & Legal</Text>
                   <View style={[s.settingCard, { backgroundColor: COLORS.white, borderColor: COLORS.bone }]}>
                     <AnimatedPressable
-                      onPress={() => Linking.openURL('https://github.com/Devshah01/wordRoot/blob/main/privacy-policy/index.html')}
+                      onPress={() => Linking.openURL('https://wordroot-i0d.pages.dev/')}
                       style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 4 }}
                       activeOpacity={0.7}
                     >
