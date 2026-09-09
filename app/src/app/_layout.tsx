@@ -68,7 +68,7 @@ export default function RootLayout() {
   }, [fontsLoaded]);
 
   if (!fontsLoaded) {
-    return null;
+    return <View style={{ flex: 1, backgroundColor: isDarkMode ? '#121212' : '#FBFBFA' }} />;
   }
 
   return (
