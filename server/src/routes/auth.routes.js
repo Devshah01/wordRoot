@@ -36,11 +36,24 @@ const resetLimiter = rateLimit({
   },
 });
 
+// Rate limiter for token refresh
+const refreshLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 30,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: {
+    error: 'Too many token refresh attempts. Please try again later.',
+  },
+});
+
 const { authenticateToken } = require('../middleware/auth.middleware');
 
 router.post('/register', authLimiter, authController.register);
 router.post('/login', authLimiter, authController.login);
 router.post('/google', googleAuthLimiter, authController.googleAuth);
+router.post('/refresh', refreshLimiter, authController.refreshToken);
+router.post('/logout', authController.logout);
 router.post('/forgot-password', resetLimiter, authController.forgotPassword);
 router.post('/reset-password', resetLimiter, authController.resetPassword);
 router.delete('/account', authenticateToken, authController.deleteAccount);

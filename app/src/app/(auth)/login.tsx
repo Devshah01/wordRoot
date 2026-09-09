@@ -58,7 +58,7 @@ export default function AuthScreen() {
     setLoading(true);
     try {
       const result = await api.auth.google({ idToken });
-      await setAuth(result.token, result.user);
+      await setAuth(result.accessToken || result.token, result.refreshToken, result.user);
       router.replace('/(tabs)/dashboard');
       runPostAuthSync();
     } catch (err: any) {
@@ -112,7 +112,7 @@ export default function AuthScreen() {
           password,
         });
       }
-      await setAuth(response.token, response.user);
+      await setAuth(response.accessToken || response.token, response.refreshToken, response.user);
       router.replace('/(tabs)/dashboard');
       runPostAuthSync();
     } catch (err: any) {

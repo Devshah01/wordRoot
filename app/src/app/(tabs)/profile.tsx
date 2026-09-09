@@ -141,6 +141,15 @@ export default function ProfileScreen() {
     } catch {
       // Not a Google user, ignore
     }
+    // Notify server to revoke refresh token
+    try {
+      const currentRefreshToken = useAppStore.getState().refreshToken;
+      if (currentRefreshToken) {
+        await api.auth.logout(currentRefreshToken);
+      }
+    } catch {
+      // Ignore network errors on logout
+    }
     await clearAuth(clearLocalData);
     setIsLoggingOut(false);
     setIsClearingData(false);

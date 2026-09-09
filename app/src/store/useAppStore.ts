@@ -52,6 +52,7 @@ interface User {
 
 interface AppState {
   token: string | null;
+  refreshToken: string | null;
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
@@ -65,7 +66,8 @@ interface AppState {
   draftVocabLines: LocalWord[];
   guestNotificationTime: string;
   
-  setAuth: (token: string, user: User) => Promise<void>;
+  setAuth: (accessToken: string, refreshToken: string, user: User) => Promise<void>;
+  setAccessToken: (accessToken: string) => Promise<void>;
   clearAuth: (clearLocalData?: boolean) => Promise<void>;
   
   // Refreshes the `words` state array with the latest data from the local SQLite db
@@ -84,6 +86,7 @@ interface AppState {
 
 export const useAppStore = create<AppState>((set, get) => ({
   token: null,
+  refreshToken: null,
   user: null,
   isAuthenticated: false,
   isLoading: true,
@@ -97,21 +100,28 @@ export const useAppStore = create<AppState>((set, get) => ({
   draftVocabLines: Array(5).fill(null).map(() => ({ word: '', meaning: '' })),
   guestNotificationTime: '16:00',
 
-  setAuth: async (token, user) => {
+  setAuth: async (accessToken, refreshToken, user) => {
     const userWithDefaults = { ...user, notificationTime: user.notificationTime ?? '09:00' };
-    await safeStorage.setItemAsync('auth_token', token);
+    await safeStorage.setItemAsync('auth_token', accessToken);
+    await safeStorage.setItemAsync('auth_refresh_token', refreshToken);
     await safeStorage.setItemAsync('auth_user', JSON.stringify(userWithDefaults));
-    set({ token, user: userWithDefaults, isAuthenticated: true });
+    set({ token: accessToken, refreshToken, user: userWithDefaults, isAuthenticated: true });
+  },
+
+  setAccessToken: async (accessToken) => {
+    await safeStorage.setItemAsync('auth_token', accessToken);
+    set({ token: accessToken });
   },
 
   clearAuth: async (clearLocalData: boolean = false) => {
     await safeStorage.deleteItemAsync('auth_token');
+    await safeStorage.deleteItemAsync('auth_refresh_token');
     await safeStorage.deleteItemAsync('auth_user');
     if (clearLocalData) {
       await clearAllLocalData();
-      set({ token: null, user: null, isAuthenticated: false, words: [] });
+      set({ token: null, refreshToken: null, user: null, isAuthenticated: false, words: [] });
     } else {
-      set({ token: null, user: null, isAuthenticated: false });
+      set({ token: null, refreshToken: null, user: null, isAuthenticated: false });
     }
   },
 
@@ -138,6 +148,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     try {
       await initDB();
       const token = await safeStorage.getItemAsync('auth_token');
+      const refreshToken = await safeStorage.getItemAsync('auth_refresh_token');
       const userStr = await safeStorage.getItemAsync('auth_user');
       const guestName = await AsyncStorage.getItem('guest_name');
       const hasCompletedOnboarding = await AsyncStorage.getItem('has_completed_onboarding') === 'true';
@@ -145,6 +156,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (token && userStr) {
         set({
           token,
+          refreshToken: refreshToken || null,
           user: JSON.parse(userStr),
           isAuthenticated: true,
           guestName,
