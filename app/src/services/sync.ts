@@ -6,7 +6,6 @@ import {
   removeSyncQueueItems,
   getWords,
   saveWordsBulk,
-  replaceAllWords,
   addSyncQueueItem,
   getSyncMetadata,
   setSyncMetadata,
@@ -172,7 +171,7 @@ export async function performCloudSync(options?: {
     // 3. Merge local words with server words
     const localWords = await getWords();
     const merged = mergeWords(localWords, serverWords);
-    await replaceAllWords(merged);
+    await saveWordsBulk(merged);
 
     // 4. Queue and push any residual differences
     await queueMergedChanges(merged, serverWords);

@@ -48,24 +48,7 @@ export const deleteWord = async (id: string) => {
   await db.runAsync('DELETE FROM words WHERE id = ?;', [id]);
 };
 
-export const replaceAllWords = async (words: Word[]) => {
-  const db = await getDB();
-  await db.withTransactionAsync(async () => {
-    await db.runAsync('DELETE FROM words');
-    for (const word of words) {
-      await db.runAsync(
-        `INSERT INTO words 
-          (id, word, meaning, dateAdded, fsrsStability, fsrsDifficulty, fsrsLapses, fsrsReps, fsrsState, lastReview, nextReview, reviewCount)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          word.id, word.word, word.meaning, word.dateAdded, word.fsrsStability,
-          word.fsrsDifficulty, word.fsrsLapses, word.fsrsReps, word.fsrsState,
-          word.lastReview, word.nextReview, word.reviewCount,
-        ]
-      );
-    }
-  });
-};
+
 
 // --- Sync Metadata Queries ---
 
