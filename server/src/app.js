@@ -8,20 +8,8 @@ const syncRoutes = require('./routes/sync.routes');
 
 const app = express();
 
-// Trust reverse proxy (Google Cloud Run / Load Balancers)
-const getTrustProxyHops = () => {
-  const envVal = process.env.TRUST_PROXY;
-  if (envVal !== undefined && envVal !== '') {
-    if (envVal === 'true') return true;
-    if (envVal === 'false') return false;
-    const parsed = parseInt(envVal, 10);
-    return isNaN(parsed) ? envVal : parsed;
-  }
-  // Default: trust proxy 1 hop for cloud deployments
-  return 1;
-};
-
-app.set('trust proxy', getTrustProxyHops());
+// Trust reverse proxy (Cloud Run, Render, Railway, AWS, Nginx)
+app.set('trust proxy', 1);
 
 app.use(helmet());
 app.use(express.json({ limit: '5mb' }));
