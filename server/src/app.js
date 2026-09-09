@@ -8,10 +8,7 @@ const syncRoutes = require('./routes/sync.routes');
 
 const app = express();
 
-// Trust reverse proxy dynamically based on environment
-// Google Cloud Run (standalone): 1 hop (Google Front End)
-// Google Cloud Run + Cloudflare CDN: 2 hops
-// Local Development: false (0 hops)
+// Trust reverse proxy (Google Cloud Run / Load Balancers)
 const getTrustProxyHops = () => {
   const envVal = process.env.TRUST_PROXY;
   if (envVal !== undefined && envVal !== '') {
@@ -20,8 +17,8 @@ const getTrustProxyHops = () => {
     const parsed = parseInt(envVal, 10);
     return isNaN(parsed) ? envVal : parsed;
   }
-  // Default: 1 hop for production (Cloud Run GFE), false for local development
-  return process.env.NODE_ENV === 'production' ? 1 : false;
+  // Default: trust proxy 1 hop for cloud deployments
+  return 1;
 };
 
 app.set('trust proxy', getTrustProxyHops());
@@ -35,6 +32,7 @@ const limiter = rateLimit({
   limit: 200, // Limit each IP to 200 requests per window (15 minutes)
   standardHeaders: 'draft-7',
   legacyHeaders: false,
+  validate: { xForwardedForHeader: false },
 });
 app.use(limiter);
 

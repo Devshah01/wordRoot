@@ -9,6 +9,7 @@ const authLimiter = rateLimit({
   limit: 10, // Max 10 attempts per IP per 15 minutes
   standardHeaders: 'draft-7',
   legacyHeaders: false,
+  validate: { xForwardedForHeader: false },
   message: {
     error: 'Too many authentication attempts from this IP. Please try again after 15 minutes.',
   },
@@ -20,6 +21,7 @@ const googleAuthLimiter = rateLimit({
   limit: 20, // Max 20 attempts per IP per 15 minutes
   standardHeaders: 'draft-7',
   legacyHeaders: false,
+  validate: { xForwardedForHeader: false },
   message: {
     error: 'Too many Google sign-in attempts. Please try again after 15 minutes.',
   },
