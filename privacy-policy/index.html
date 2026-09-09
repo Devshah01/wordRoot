@@ -86,24 +86,107 @@
       margin-bottom: 16px;
     }
 
-    .theme-btn {
+    .theme-toggle-switch {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
       background: var(--card);
       border: 1px solid var(--bone);
-      color: var(--charcoal);
-      padding: 8px 16px;
-      border-radius: 20px;
-      font-family: 'Inter', sans-serif;
-      font-size: 0.85rem;
-      font-weight: 500;
+      border-radius: 30px;
+      padding: 4px;
       cursor: pointer;
+      user-select: none;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .theme-toggle-switch:hover {
+      border-color: var(--charcoal);
+    }
+
+    .theme-toggle-track {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .theme-option {
       display: flex;
       align-items: center;
       gap: 6px;
-      transition: all 0.2s ease;
+      padding: 6px 14px;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--warmgray);
+      z-index: 2;
+      transition: color 0.25s ease;
+      cursor: pointer;
     }
 
-    .theme-btn:hover {
-      transform: translateY(-1px);
+    .theme-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .theme-thumb {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      width: 50%;
+      background-color: var(--charcoal);
+      border-radius: 24px;
+      z-index: 1;
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.25s ease;
+    }
+
+    /* Light mode active */
+    body.light-mode .theme-thumb {
+      transform: translateX(0%);
+    }
+    body.light-mode .light-opt {
+      color: var(--bg);
+    }
+    body.light-mode .dark-opt {
+      color: var(--warmgray);
+    }
+
+    /* Dark mode active */
+    body.dark-mode .theme-thumb {
+      transform: translateX(100%);
+    }
+    body.dark-mode .light-opt {
+      color: var(--warmgray);
+    }
+    body.dark-mode .dark-opt {
+      color: var(--bg);
+    }
+
+    /* Fallback system media query before class is explicitly added */
+    @media (prefers-color-scheme: dark) {
+      body:not(.light-mode) .theme-thumb {
+        transform: translateX(100%);
+      }
+      body:not(.light-mode) .light-opt {
+        color: var(--warmgray);
+      }
+      body:not(.light-mode) .dark-opt {
+        color: var(--bg);
+      }
+    }
+
+    @media (prefers-color-scheme: light) {
+      body:not(.dark-mode) .theme-thumb {
+        transform: translateX(0%);
+      }
+      body:not(.dark-mode) .light-opt {
+        color: var(--bg);
+      }
+      body:not(.dark-mode) .dark-opt {
+        color: var(--warmgray);
+      }
     }
 
     .container {
@@ -254,9 +337,23 @@
 <body>
   <div class="wrapper">
     <div class="theme-toggle-bar">
-      <button class="theme-btn" id="themeToggleBtn" onclick="toggleTheme()">
-        <span>🌙 / ☀️ Toggle Theme</span>
-      </button>
+      <div class="theme-toggle-switch" id="themeToggleBtn" role="button" tabindex="0" aria-label="Toggle theme" onclick="toggleTheme()">
+        <div class="theme-toggle-track">
+          <div class="theme-option light-opt" onclick="setAppTheme('light', event)">
+            <span class="theme-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+            </span>
+            <span>Light</span>
+          </div>
+          <div class="theme-option dark-opt" onclick="setAppTheme('dark', event)">
+            <span class="theme-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+            </span>
+            <span>Dark</span>
+          </div>
+          <div class="theme-thumb"></div>
+        </div>
+      </div>
     </div>
 
     <main class="container">
@@ -372,16 +469,43 @@
   </div>
 
   <script>
-    function toggleTheme() {
+    function setAppTheme(theme, event) {
+      if (event) event.stopPropagation();
       const body = document.body;
-      if (body.classList.contains('dark-mode')) {
-        body.classList.remove('dark-mode');
-        body.classList.add('light-mode');
-      } else {
+      if (theme === 'dark') {
         body.classList.remove('light-mode');
         body.classList.add('dark-mode');
+      } else {
+        body.classList.remove('dark-mode');
+        body.classList.add('light-mode');
       }
+      try {
+        localStorage.setItem('wordroot_privacy_theme', theme);
+      } catch (e) {}
     }
+
+    function getEffectiveTheme() {
+      const body = document.body;
+      if (body.classList.contains('dark-mode')) return 'dark';
+      if (body.classList.contains('light-mode')) return 'light';
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+
+    function toggleTheme() {
+      const current = getEffectiveTheme();
+      setAppTheme(current === 'dark' ? 'light' : 'dark');
+    }
+
+    (function initTheme() {
+      try {
+        const saved = localStorage.getItem('wordroot_privacy_theme');
+        if (saved === 'dark') {
+          document.body.classList.add('dark-mode');
+        } else if (saved === 'light') {
+          document.body.classList.add('light-mode');
+        }
+      } catch (e) {}
+    })();
   </script>
 </body>
 </html>
