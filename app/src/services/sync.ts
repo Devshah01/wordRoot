@@ -4,6 +4,7 @@ import {
   getSyncQueue,
   clearSyncQueue,
   removeSyncQueueItems,
+  incrementSyncQueueRetryCount,
   getWords,
   saveWordsBulk,
   addSyncQueueItem,
@@ -193,6 +194,8 @@ export async function getLastSyncLabel(): Promise<string | null> {
   return date.toLocaleString();
 }
 
+const MAX_RETRIES = 5;
+
 export const triggerSync = async (
   isAuthenticated: boolean
 ): Promise<{ success: boolean; queueEmpty: boolean }> => {
@@ -206,8 +209,22 @@ export const triggerSync = async (
 
   isSyncing = true;
   try {
-    const queue = await getSyncQueue();
-    if (queue.length === 0) {
+    let rawQueue = await getSyncQueue();
+    if (rawQueue.length === 0) {
+      isSyncing = false;
+      return { success: true, queueEmpty: true };
+    }
+
+    // Dead-Letter Eviction: Purge items exceeding MAX_RETRIES
+    const expiredItems = rawQueue.filter((item: any) => (item.retryCount ?? 0) >= MAX_RETRIES);
+    if (expiredItems.length > 0) {
+      const expiredIds = expiredItems.map((item: any) => item.id);
+      console.warn(`Evicting ${expiredIds.length} sync queue items that exceeded max retries (${MAX_RETRIES}):`, expiredIds);
+      await removeSyncQueueItems(expiredIds);
+      rawQueue = rawQueue.filter((item: any) => (item.retryCount ?? 0) < MAX_RETRIES);
+    }
+
+    if (rawQueue.length === 0) {
       isSyncing = false;
       return { success: true, queueEmpty: true };
     }
@@ -216,12 +233,41 @@ export const triggerSync = async (
     let totalSynced = 0;
     let anyBatchFailed = false;
 
-    for (let i = 0; i < queue.length; i += BATCH_SIZE) {
-      const chunk = queue.slice(i, i + BATCH_SIZE);
-      const payload = chunk.map((item: any) => ({
-        ...item,
-        data: JSON.parse(item.data),
+    for (let i = 0; i < rawQueue.length; i += BATCH_SIZE) {
+      const chunk = rawQueue.slice(i, i + BATCH_SIZE);
+      const validChunk: any[] = [];
+      const corruptItemIds: number[] = [];
+
+      for (const item of chunk) {
+        try {
+          const parsedData = typeof item.data === 'string' ? JSON.parse(item.data) : item.data;
+          validChunk.push({
+            ...item,
+            data: parsedData,
+          });
+        } catch (jsonErr) {
+          console.error(`Removing corrupt sync queue item ${item.id} due to JSON parse error:`, jsonErr);
+          corruptItemIds.push(item.id);
+        }
+      }
+
+      if (corruptItemIds.length > 0) {
+        await removeSyncQueueItems(corruptItemIds);
+      }
+
+      if (validChunk.length === 0) {
+        continue;
+      }
+
+      const payload = validChunk.map((item: any) => ({
+        id: item.id,
+        wordId: item.wordId,
+        action: item.action,
+        data: item.data,
+        timestamp: item.timestamp,
       }));
+
+      const chunkItemIds = validChunk.map((c: any) => c.id);
 
       try {
         const response = await api.sync.push(payload);
@@ -230,24 +276,36 @@ export const triggerSync = async (
             await removeSyncQueueItems(response.successIds);
             totalSynced += response.successIds.length;
           } else {
-            const chunkItemIds = chunk.map((c: any) => c.id);
             await removeSyncQueueItems(chunkItemIds);
-            totalSynced += chunk.length;
+            totalSynced += validChunk.length;
           }
+
+          if (response.failedIds && response.failedIds.length > 0) {
+            await incrementSyncQueueRetryCount(response.failedIds);
+          }
+
           await setSyncMetadata('last_push_at', new Date().toISOString());
         } else {
+          console.warn(`Sync chunk rejected by server: ${response?.error || 'Unknown error'}`);
+          await incrementSyncQueueRetryCount(chunkItemIds);
           anyBatchFailed = true;
           break;
         }
-      } catch (chunkErr) {
-        console.error(`Sync chunk failed (${i} to ${i + chunk.length}):`, chunkErr);
+      } catch (chunkErr: any) {
+        console.error(`Sync chunk failed (${i} to ${i + validChunk.length}):`, chunkErr);
+        const errorMsg = chunkErr?.message || '';
+        const isNetworkError = errorMsg.includes('Cannot reach server') || errorMsg.includes('Network request failed');
+
+        if (!isNetworkError) {
+          await incrementSyncQueueRetryCount(chunkItemIds);
+        }
         anyBatchFailed = true;
         break;
       }
     }
 
     const remainingQueue = await getSyncQueue();
-    console.log(`Synced ${totalSynced}/${queue.length} items. Remaining in queue: ${remainingQueue.length}`);
+    console.log(`Synced ${totalSynced}/${rawQueue.length} items. Remaining in queue: ${remainingQueue.length}`);
 
     return {
       success: !anyBatchFailed || totalSynced > 0,

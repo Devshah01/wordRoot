@@ -92,6 +92,16 @@ export const removeSyncQueueItems = async (ids: number[]) => {
   await db.runAsync(`DELETE FROM sync_queue WHERE id IN (${placeholders})`, ids);
 };
 
+export const incrementSyncQueueRetryCount = async (ids: number[]) => {
+  if (ids.length === 0) return;
+  const db = await getDB();
+  const placeholders = ids.map(() => '?').join(',');
+  await db.runAsync(
+    `UPDATE sync_queue SET retryCount = COALESCE(retryCount, 0) + 1 WHERE id IN (${placeholders})`,
+    ids
+  );
+};
+
 // Clear all local SQLite data on account logout to prevent data leaking
 export const clearAllLocalData = async () => {
   const db = await getDB();

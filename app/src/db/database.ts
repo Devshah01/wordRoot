@@ -32,9 +32,16 @@ export const initDB = () => {
           wordId TEXT NOT NULL,
           action TEXT NOT NULL, -- 'review', 'add', 'update', 'delete'
           data TEXT NOT NULL, -- JSON payload of the action
-          timestamp TEXT NOT NULL
+          timestamp TEXT NOT NULL,
+          retryCount INTEGER DEFAULT 0
         );
       `);
+
+      try {
+        await db.execAsync('ALTER TABLE sync_queue ADD COLUMN retryCount INTEGER DEFAULT 0;');
+      } catch {
+        // Column already exists or table was just created
+      }
 
       await db.execAsync(`
         CREATE TABLE IF NOT EXISTS sync_metadata (
