@@ -183,17 +183,26 @@ router.post('/', async (req, res) => {
           }
         } else if (action === 'delete') {
           const wordKey = typeof data?.word === 'string' ? data.word.trim().toLowerCase() : '';
-          const orConditions = [{ id: wordId }];
+          let deletedCount = 0;
+
           if (wordKey) {
-            orConditions.push({ word: wordKey });
+            const result = await prisma.word.deleteMany({
+              where: {
+                userId,
+                word: wordKey,
+              },
+            });
+            deletedCount = result.count;
           }
 
-          await prisma.word.deleteMany({
-            where: {
-              userId,
-              OR: orConditions,
-            },
-          });
+          if (deletedCount === 0 && wordId) {
+            await prisma.word.deleteMany({
+              where: {
+                userId,
+                id: wordId,
+              },
+            });
+          }
         }
 
         successCount++;
