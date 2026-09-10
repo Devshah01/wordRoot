@@ -162,8 +162,13 @@ async function googleAuth(req, res) {
     });
 
     const payload = ticket.getPayload();
+
+    if (!payload || !payload.email || typeof payload.email !== 'string') {
+      return res.status(400).json({ error: 'Google account did not provide a valid email address' });
+    }
+
     const googleId = payload.sub;
-    const email = payload.email.toLowerCase();
+    const email = payload.email.trim().toLowerCase();
     
     if (!payload.email_verified) {
       return res.status(403).json({ error: 'Google email must be verified to sign in' });
