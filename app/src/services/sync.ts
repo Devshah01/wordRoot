@@ -29,16 +29,69 @@ export function wordKey(w: Word): string {
   return w.word.trim().toLowerCase();
 }
 
-export function pickWinner(a: Word, b: Word): Word {
-  if (a.reviewCount !== b.reviewCount) {
-    return a.reviewCount > b.reviewCount ? a : b;
-  }
+export function mergeTwoWords(a: Word, b: Word): Word {
+  // 1. Determine Study / FSRS statistics winner
+  let reviewWinner = a;
   if (a.lastReview && b.lastReview) {
-    return new Date(a.lastReview) > new Date(b.lastReview) ? a : b;
+    if (new Date(a.lastReview).getTime() !== new Date(b.lastReview).getTime()) {
+      reviewWinner = new Date(a.lastReview) > new Date(b.lastReview) ? a : b;
+    } else if (a.reviewCount !== b.reviewCount) {
+      reviewWinner = a.reviewCount > b.reviewCount ? a : b;
+    }
+  } else if (a.lastReview && !b.lastReview) {
+    reviewWinner = a;
+  } else if (!a.lastReview && b.lastReview) {
+    reviewWinner = b;
+  } else if (a.reviewCount !== b.reviewCount) {
+    reviewWinner = a.reviewCount > b.reviewCount ? a : b;
   }
-  if (a.lastReview && !b.lastReview) return a;
-  if (!a.lastReview && b.lastReview) return b;
-  return new Date(a.dateAdded) <= new Date(b.dateAdded) ? a : b;
+
+  // 2. Determine Text Content (meaning/word) winner
+  let contentWinner = a;
+  if (a.updatedAt && b.updatedAt) {
+    if (new Date(a.updatedAt).getTime() !== new Date(b.updatedAt).getTime()) {
+      contentWinner = new Date(a.updatedAt) > new Date(b.updatedAt) ? a : b;
+    }
+  } else if (a.updatedAt && !b.updatedAt) {
+    contentWinner = a;
+  } else if (!a.updatedAt && b.updatedAt) {
+    contentWinner = b;
+  } else if (a.meaning !== b.meaning) {
+    // If no explicit updatedAt, but meanings differ:
+    // Retain whichever definition was customized/edited (prefer non-empty/longer definition or lower review count edit)
+    if (a.reviewCount < b.reviewCount) {
+      contentWinner = a;
+    } else if (b.reviewCount < a.reviewCount) {
+      contentWinner = b;
+    } else {
+      contentWinner = a.meaning.length >= b.meaning.length ? a : b;
+    }
+  }
+
+  const earliestDateAdded =
+    new Date(a.dateAdded) <= new Date(b.dateAdded) ? a.dateAdded : b.dateAdded;
+
+  return {
+    id: a.id || b.id,
+    word: contentWinner.word,
+    meaning: contentWinner.meaning,
+    dateAdded: earliestDateAdded,
+    updatedAt: contentWinner.updatedAt || reviewWinner.updatedAt,
+
+    // Study & FSRS statistics from reviewWinner
+    fsrsStability: reviewWinner.fsrsStability,
+    fsrsDifficulty: reviewWinner.fsrsDifficulty,
+    fsrsLapses: reviewWinner.fsrsLapses,
+    fsrsReps: reviewWinner.fsrsReps,
+    fsrsState: reviewWinner.fsrsState,
+    lastReview: reviewWinner.lastReview,
+    nextReview: reviewWinner.nextReview,
+    reviewCount: reviewWinner.reviewCount,
+  };
+}
+
+export function pickWinner(a: Word, b: Word): Word {
+  return mergeTwoWords(a, b);
 }
 
 export function mergeWords(local: Word[], server: Word[]): Word[] {
@@ -54,8 +107,8 @@ export function mergeWords(local: Word[], server: Word[]): Word[] {
     if (!existing) {
       result.set(key, l);
     } else {
-      const winner = pickWinner(existing, l);
-      result.set(key, { ...winner, id: existing.id });
+      const merged = mergeTwoWords(existing, l);
+      result.set(key, { ...merged, id: existing.id || l.id });
     }
   }
 

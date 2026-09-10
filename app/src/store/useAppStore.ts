@@ -35,6 +35,7 @@ export interface Word {
   nextReview: string;
   reviewCount: number;
   isDraft?: boolean;
+  updatedAt?: string;
 }
 
 export interface LocalWord {
