@@ -23,9 +23,14 @@ import { useAppStore } from '../store/useAppStore';
 
 const SPIN_SOUND = require('../../assets/sounds/spin.mp3');
 
-const waitForPlayerReady = async (player: AudioPlayer, timeoutMs = 4000) => {
+const waitForPlayerReady = async (
+  player: AudioPlayer,
+  isCancelled: () => boolean,
+  timeoutMs = 4000
+) => {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
+    if (isCancelled()) return false;
     if (player.isLoaded) return true;
     await new Promise((resolve) => setTimeout(resolve, 50));
   }
@@ -42,8 +47,6 @@ const AnimatedSvg = Animated.createAnimatedComponent(Svg);
 
 const SPLASH_DURATION_MS = 4200;
 
-
-
 export default function AnimatedSplashScreen({ onAnimationFinish }: { onAnimationFinish: () => void }) {
   const isDarkMode = useAppStore((s) => s.isDarkMode);
   const COLORS = isDarkMode ? APP_COLORS.dark : APP_COLORS.light;
@@ -56,6 +59,7 @@ export default function AnimatedSplashScreen({ onAnimationFinish }: { onAnimatio
   onFinishRef.current = onAnimationFinish;
 
   const audioStopped = useRef(false);
+  const hasFinishedRef = useRef(false);
   const spinPlayerRef = useRef<AudioPlayer | null>(null);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
@@ -70,12 +74,20 @@ export default function AnimatedSplashScreen({ onAnimationFinish }: { onAnimatio
     spinPlayerRef.current = null;
   };
 
-
+  const safeFinish = () => {
+    if (hasFinishedRef.current) return;
+    hasFinishedRef.current = true;
+    stopSplashAudio();
+    onFinishRef.current();
+  };
 
   useEffect(() => {
     let cancelled = false;
     // Reset on every mount so a re-mount (e.g. hot reload) works correctly
     audioStopped.current = false;
+    hasFinishedRef.current = false;
+
+    const isCancelledOrStopped = () => cancelled || audioStopped.current;
 
     const startSplashAudio = async () => {
       try {
@@ -88,22 +100,22 @@ export default function AnimatedSplashScreen({ onAnimationFinish }: { onAnimatio
 
         const spinAsset = await Asset.fromModule(SPIN_SOUND).downloadAsync();
 
-        if (cancelled || audioStopped.current) return;
+        if (isCancelledOrStopped()) return;
 
         const spinPlayer = createAudioPlayer({ uri: spinAsset.localUri ?? spinAsset.uri });
         
         spinPlayerRef.current = spinPlayer;
         spinPlayer.volume = 1;
 
-        await waitForPlayerReady(spinPlayer);
+        const ready = await waitForPlayerReady(spinPlayer, isCancelledOrStopped);
         
-        if (cancelled || audioStopped.current) return;
+        if (!ready || isCancelledOrStopped()) return;
 
         await spinPlayer.seekTo(0);
         spinPlayer.play();
 
         const spinStopTimer = setTimeout(() => {
-          if (cancelled || audioStopped.current) return;
+          if (isCancelledOrStopped()) return;
           try { spinPlayer.pause(); } catch {}
         }, 1000);
         timersRef.current.push(spinStopTimer);
@@ -118,14 +130,13 @@ export default function AnimatedSplashScreen({ onAnimationFinish }: { onAnimatio
 
         const finishTimer = setTimeout(() => {
           if (cancelled) return;
-          stopSplashAudio();
-          onFinishRef.current();
+          safeFinish();
         }, SPLASH_DURATION_MS);
         timersRef.current.push(finishTimer);
 
       } catch (error) {
         console.warn('[splash] audio setup failed', error);
-        if (!cancelled) onFinishRef.current();
+        if (!cancelled) safeFinish();
       }
     };
 
