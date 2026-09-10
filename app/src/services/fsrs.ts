@@ -5,17 +5,38 @@ import { Word } from '../store/useAppStore';
 const params: FSRSParameters = generatorParameters({ enable_fuzz: true });
 const f = fsrs(params);
 
-const MS_PER_DAY = 1000 * 60 * 60 * 24;
+const MS_PER_HOUR = 1000 * 60 * 60;
+const MS_PER_DAY = MS_PER_HOUR * 24;
+const CUTOFF_HOUR = 4; // Anki-style 4:00 AM day rollover
 
 /**
- * Calculates calendar days difference between two dates by resetting time to local midnight.
- * This ensures reviewing a card across day boundaries (e.g. 11:50 PM to 8:00 AM next morning)
- * yields 1 calendar day instead of 0 due to continuous millisecond rounding.
+ * Gets the adjusted "Study Date" for FSRS where hours before 4 AM belong to the previous date.
+ */
+const getStudyDate = (d: Date): Date => {
+  const adjusted = new Date(d);
+  if (adjusted.getHours() < CUTOFF_HOUR) {
+    adjusted.setDate(adjusted.getDate() - 1);
+  }
+  return new Date(adjusted.getFullYear(), adjusted.getMonth(), adjusted.getDate());
+};
+
+/**
+ * Calculates calendar days difference between two dates using an Anki-style 4:00 AM cutoff
+ * and a 4-hour intra-session minimum threshold guard.
  */
 const getCalendarDaysDifference = (laterDate: Date, earlierDate: Date): number => {
-  const d1 = new Date(laterDate.getFullYear(), laterDate.getMonth(), laterDate.getDate());
-  const d2 = new Date(earlierDate.getFullYear(), earlierDate.getMonth(), earlierDate.getDate());
-  return Math.round((d1.getTime() - d2.getTime()) / MS_PER_DAY);
+  const hoursPassed = (laterDate.getTime() - earlierDate.getTime()) / MS_PER_HOUR;
+  
+  // Guard against intra-session reviews crossing midnight or cutoff:
+  // If less than 4 hours passed between reviews, treat as 0 days elapsed.
+  if (hoursPassed < 4) {
+    return 0;
+  }
+
+  const d1 = getStudyDate(laterDate);
+  const d2 = getStudyDate(earlierDate);
+
+  return Math.max(0, Math.round((d1.getTime() - d2.getTime()) / MS_PER_DAY));
 };
 
 export const calculateNextFSRSState = (word: Word, ratingString: 'remember' | 'forgot'): Word => {
