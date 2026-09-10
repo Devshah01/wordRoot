@@ -136,23 +136,30 @@ router.post('/', async (req, res) => {
             orConditions.push({ word: wordKey });
           }
 
+          const updateData = {
+            fsrsStability: parsedData.fsrsStability,
+            fsrsDifficulty: parsedData.fsrsDifficulty,
+            fsrsLapses: parsedData.fsrsLapses,
+            fsrsReps: parsedData.fsrsReps,
+            fsrsState: parsedData.fsrsState,
+            lastReview: parsedData.lastReview,
+            nextReview: parsedData.nextReview,
+            reviewCount: parsedData.reviewCount,
+          };
+
+          if (wordKey !== undefined) {
+            updateData.word = wordKey;
+          }
+          if (parsedData.meaning !== undefined) {
+            updateData.meaning = parsedData.meaning.trim();
+          }
+
           const updateResult = await prisma.word.updateMany({
             where: {
               userId,
               OR: orConditions,
             },
-            data: {
-              word: wordKey,
-              meaning: parsedData.meaning ? parsedData.meaning.trim() : undefined,
-              fsrsStability: parsedData.fsrsStability,
-              fsrsDifficulty: parsedData.fsrsDifficulty,
-              fsrsLapses: parsedData.fsrsLapses,
-              fsrsReps: parsedData.fsrsReps,
-              fsrsState: parsedData.fsrsState,
-              lastReview: parsedData.lastReview,
-              nextReview: parsedData.nextReview,
-              reviewCount: parsedData.reviewCount,
-            },
+            data: updateData,
           });
 
           // If no existing row was matched and word text + meaning are present, upsert to prevent review loss
@@ -186,17 +193,7 @@ router.post('/', async (req, res) => {
                         word: wordKey,
                       },
                     },
-                    data: {
-                      meaning: parsedData.meaning.trim(),
-                      fsrsStability: parsedData.fsrsStability,
-                      fsrsDifficulty: parsedData.fsrsDifficulty,
-                      fsrsLapses: parsedData.fsrsLapses,
-                      fsrsReps: parsedData.fsrsReps,
-                      fsrsState: parsedData.fsrsState,
-                      lastReview: parsedData.lastReview,
-                      nextReview: parsedData.nextReview,
-                      reviewCount: parsedData.reviewCount,
-                    },
+                    data: updateData,
                   });
                 } else {
                   throw createErr;
@@ -210,17 +207,7 @@ router.post('/', async (req, res) => {
                     word: wordKey,
                   },
                 },
-                data: {
-                  meaning: parsedData.meaning ? parsedData.meaning.trim() : undefined,
-                  fsrsStability: parsedData.fsrsStability,
-                  fsrsDifficulty: parsedData.fsrsDifficulty,
-                  fsrsLapses: parsedData.fsrsLapses,
-                  fsrsReps: parsedData.fsrsReps,
-                  fsrsState: parsedData.fsrsState,
-                  lastReview: parsedData.lastReview,
-                  nextReview: parsedData.nextReview,
-                  reviewCount: parsedData.reviewCount,
-                },
+                data: updateData,
               });
             } else {
               throw new Error(`Word not found for update (wordId: ${wordId})`);

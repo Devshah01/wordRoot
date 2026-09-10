@@ -188,7 +188,12 @@ export default function ReviewScreen() {
     // 2. Update local state
     try {
       await saveWord(updatedWord);
-      await queueCloudChange(updatedWord.id, 'review', { rating, updatedWord });
+      await queueCloudChange(updatedWord.id, 'review', {
+        rating,
+        word: updatedWord.word,
+        meaning: updatedWord.meaning,
+        updatedWord,
+      });
 
       const newSessionWords = [...sessionWords];
       newSessionWords[currentIndex] = updatedWord;
