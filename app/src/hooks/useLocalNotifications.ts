@@ -60,15 +60,32 @@ export function useLocalNotifications() {
     if (isExpoGo || !Notifications) return;
 
     notificationListener.current = Notifications.addNotificationReceivedListener(() => {});
-
     responseListener.current = Notifications.addNotificationResponseReceivedListener(() => {});
 
     return () => {
-      if (notificationListener.current?.remove) {
-        notificationListener.current.remove();
+      if (notificationListener.current) {
+        try {
+          if (typeof Notifications.removeNotificationSubscription === 'function') {
+            Notifications.removeNotificationSubscription(notificationListener.current);
+          } else if (typeof notificationListener.current.remove === 'function') {
+            notificationListener.current.remove();
+          }
+        } catch (e) {
+          console.log('Error removing notification listener:', e);
+        }
+        notificationListener.current = null;
       }
-      if (responseListener.current?.remove) {
-        responseListener.current.remove();
+      if (responseListener.current) {
+        try {
+          if (typeof Notifications.removeNotificationSubscription === 'function') {
+            Notifications.removeNotificationSubscription(responseListener.current);
+          } else if (typeof responseListener.current.remove === 'function') {
+            responseListener.current.remove();
+          }
+        } catch (e) {
+          console.log('Error removing notification response listener:', e);
+        }
+        responseListener.current = null;
       }
     };
   }, []);
