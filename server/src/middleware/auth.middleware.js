@@ -33,6 +33,7 @@ async function authenticateToken(req, res, next) {
     }
 
     req.user = user;
+    req.userId = user.id;
     next();
   } catch (err) {
     if (err.message === "JWT_SECRET is not defined in environment variables.") {
