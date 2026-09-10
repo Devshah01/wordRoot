@@ -15,7 +15,7 @@ import { useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { ChevronLeft, ChevronRight, Trash2, Edit2, X, Search, BookOpen, ArrowLeft, Plus, AlertCircle } from 'lucide-react-native';
 import { useAppStore } from '../../store/useAppStore';
 import { APP_COLORS } from '../../constants/theme';
-import { formatLocalDateString } from '../../services/localData';
+import { formatLocalDateString, parseDateSafe } from '../../services/localData';
 import * as Crypto from 'expo-crypto';
 import { saveWordsBulk, deleteWord } from '../../db/queries';
 import { queueCloudChange } from '../../services/sync';
@@ -52,20 +52,11 @@ export default function CalendarScreen() {
 
   useEffect(() => {
     if (focusDate) {
-      const parts = focusDate.split('-').map(Number);
-      if (parts.length === 3 && !parts.some(isNaN)) {
-        const [year, month, day] = parts;
-        const target = new Date(year, month - 1, day);
-        setSelectedDate(target);
-        setCurrentMonth(month - 1);
-        setCurrentYear(year);
-      } else {
-        const parsed = new Date(focusDate);
-        if (!isNaN(parsed.getTime())) {
-          setSelectedDate(parsed);
-          setCurrentMonth(parsed.getMonth());
-          setCurrentYear(parsed.getFullYear());
-        }
+      const parsed = parseDateSafe(focusDate);
+      if (!isNaN(parsed.getTime())) {
+        setSelectedDate(parsed);
+        setCurrentMonth(parsed.getMonth());
+        setCurrentYear(parsed.getFullYear());
       }
     }
   }, [focusDate]);
@@ -749,7 +740,7 @@ export default function CalendarScreen() {
                       <AnimatedPressable
                         key={`search-${index}`}
                         onPress={() => {
-                          const d = new Date(item.dateAdded || (item as any).createdAt || new Date());
+                          const d = parseDateSafe(item.dateAdded || (item as any).createdAt || new Date());
                           setSelectedDate(d);
                           setCurrentMonth(d.getMonth());
                           setCurrentYear(d.getFullYear());

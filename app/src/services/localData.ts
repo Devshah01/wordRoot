@@ -8,8 +8,8 @@ export function parseDateSafe(dInput: Date | string = new Date()): Date {
   if (dInput instanceof Date) return dInput;
   if (typeof dInput === 'string') {
     const trimmed = dInput.trim();
-    // If format is strictly YYYY-MM-DD (date only), construct local Date directly
-    const match = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    // Match YYYY-MM-DD or YYYY-MM-DDT00:00:00... (date-only or UTC/local midnight ISO strings)
+    const match = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ]00:00:00(?:\.000)?(?:Z|[+-]00:00)?)?$/);
     if (match) {
       const year = parseInt(match[1], 10);
       const month = parseInt(match[2], 10);
