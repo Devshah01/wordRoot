@@ -6,6 +6,8 @@ import {
   Modal,
   TextInput,
   StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
@@ -528,24 +530,34 @@ export default function CalendarScreen() {
           {/* ========== EXPANDED VOCAB MODAL ========== */}
         <Modal visible={isEditorOpen} animationType="fade" transparent={false}>
           <SafeAreaView style={[s.container, { paddingHorizontal: 12 }]}>
-            <GestureDetector gesture={dayPanGesture}>
-              <View style={{ flex: 1 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 24, marginTop: 12 }}>
-                    <AnimatedPressable onPress={() => setIsEditorOpen(false)} style={{ marginRight: 16 }}>
-                      <ArrowLeft size={28} color={COLORS.charcoal} />
-                    </AnimatedPressable>
-                    <View style={s.datePill}>
-                      <Text style={s.datePillText}>
-                        {selectedDay}  |  {selectedMonthName.substring(0, 3)}  |  {selectedYear}
-                      </Text>
+            <KeyboardAvoidingView
+              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+              style={{ flex: 1 }}
+            >
+              <GestureDetector gesture={dayPanGesture}>
+                <View style={{ flex: 1 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 24, marginTop: 12 }}>
+                      <AnimatedPressable onPress={() => setIsEditorOpen(false)} style={{ marginRight: 16 }}>
+                        <ArrowLeft size={28} color={COLORS.charcoal} />
+                      </AnimatedPressable>
+                      <View style={s.datePill}>
+                        <Text style={s.datePillText}>
+                          {selectedDay}  |  {selectedMonthName.substring(0, 3)}  |  {selectedYear}
+                        </Text>
+                      </View>
+                      <View style={{ flex: 1 }} />
+                      <AnimatedPressable onPress={handleSaveCalendarVocab} style={s.savePill}>
+                        <Text style={s.savePillText}>Save</Text>
+                      </AnimatedPressable>
                     </View>
-                    <View style={{ flex: 1 }} />
-                    <AnimatedPressable onPress={handleSaveCalendarVocab} style={s.savePill}>
-                      <Text style={s.savePillText}>Save</Text>
-                    </AnimatedPressable>
-                  </View>
 
-              <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+                <ScrollView
+                  style={{ flex: 1 }}
+                  contentContainerStyle={{ paddingBottom: 160 }}
+                  showsVerticalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                  automaticallyAdjustKeyboardInsets={true}
+                >
                 {errorMessage ? (
                   <View style={s.errorBox}>
                     <AlertCircle size={16} color={isDarkMode ? '#FCA5A5' : '#DC2626'} style={{ marginRight: 8 }} />
@@ -679,8 +691,9 @@ export default function CalendarScreen() {
               </ScrollView>
               </View>
               </GestureDetector>
-            </SafeAreaView>
-          </Modal>
+            </KeyboardAvoidingView>
+          </SafeAreaView>
+        </Modal>
 
           {/* ========== YEAR PICKER MODAL ========== */}
           <Modal visible={isYearPickerOpen} animationType="fade" transparent>

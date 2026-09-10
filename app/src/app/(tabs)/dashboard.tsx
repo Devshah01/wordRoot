@@ -8,6 +8,8 @@ import {
   Modal,
   StyleSheet,
   Dimensions,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { GestureDetector, Gesture, TouchableOpacity } from 'react-native-gesture-handler';
 import AnimatedPressable from '../../components/AnimatedPressable';
@@ -550,140 +552,151 @@ export default function DashboardScreen() {
         {/* ========== EXPANDED VOCAB MODAL ========== */}
         <Modal visible={isVocabCardExpanded} animationType="fade" transparent={false}>
           <SafeAreaView style={[s.container, { paddingHorizontal: 12 }]}>
-            <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 24, marginTop: 12 }}>
-                <AnimatedPressable onPress={handleToggleExpand} style={{ marginRight: 16 }}>
-                  <ArrowLeft size={28} color={COLORS.charcoal} />
-                </AnimatedPressable>
-                <View style={[s.datePill, s.expandedDatePill]}>
-                  <Text style={s.datePillText}>{getFormattedDate()}</Text>
-                </View>
-                <View style={{ flex: 1 }} />
-                <AnimatedPressable onPress={handleSaveVocab} style={s.savePill}>
-                  <Text style={s.savePillText}>Save</Text>
-                </AnimatedPressable>
-              </View>
-
-              <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-                {errorMessage ? (
-                  <View style={s.errorBox}>
-                    <AlertCircle size={16} color={isDarkMode ? '#FCA5A5' : '#DC2626'} style={{ marginRight: 8 }} />
-                    <Text style={s.errorText}>{errorMessage}</Text>
+            <KeyboardAvoidingView
+              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+              style={{ flex: 1 }}
+            >
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 24, marginTop: 12 }}>
+                  <AnimatedPressable onPress={handleToggleExpand} style={{ marginRight: 16 }}>
+                    <ArrowLeft size={28} color={COLORS.charcoal} />
+                  </AnimatedPressable>
+                  <View style={[s.datePill, s.expandedDatePill]}>
+                    <Text style={s.datePillText}>{getFormattedDate()}</Text>
                   </View>
-                ) : null}
-                {editedSavedWords.map((word, index) => {
-                  const wordErr = word.word.length > 100;
-                  const meaningErr = word.meaning.length > 500;
-                  const hasErr = wordErr || meaningErr;
-                  return (
-                    <View key={`saved-${index}`} style={{ marginBottom: 14 }}>
-                      <View style={s.wordRow}>
-                        <Text style={s.wordRowNum}>{index + 1}.</Text>
-                        <View style={[s.wordCardBox, hasErr && s.wordRowContentError]}>
-                          <View style={s.wordCardHeader}>
+                  <View style={{ flex: 1 }} />
+                  <AnimatedPressable onPress={handleSaveVocab} style={s.savePill}>
+                    <Text style={s.savePillText}>Save</Text>
+                  </AnimatedPressable>
+                </View>
+
+                <ScrollView
+                  style={{ flex: 1 }}
+                  contentContainerStyle={{ paddingBottom: 160 }}
+                  showsVerticalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                  automaticallyAdjustKeyboardInsets={true}
+                >
+                  {errorMessage ? (
+                    <View style={s.errorBox}>
+                      <AlertCircle size={16} color={isDarkMode ? '#FCA5A5' : '#DC2626'} style={{ marginRight: 8 }} />
+                      <Text style={s.errorText}>{errorMessage}</Text>
+                    </View>
+                  ) : null}
+                  {editedSavedWords.map((word, index) => {
+                    const wordErr = word.word.length > 100;
+                    const meaningErr = word.meaning.length > 500;
+                    const hasErr = wordErr || meaningErr;
+                    return (
+                      <View key={`saved-${index}`} style={{ marginBottom: 14 }}>
+                        <View style={s.wordRow}>
+                          <Text style={s.wordRowNum}>{index + 1}.</Text>
+                          <View style={[s.wordCardBox, hasErr && s.wordRowContentError]}>
+                            <View style={s.wordCardHeader}>
+                              <TextInput
+                                placeholder="Word"
+                                placeholderTextColor={COLORS.warmgray}
+                                style={s.wordInputSaved}
+                                value={word.word}
+                                onChangeText={(val) => {
+                                  setEditedSavedWords(prev =>
+                                    prev.map((item, i) =>
+                                      i === index ? { ...item, word: val } : item
+                                    )
+                                  );
+                                }}
+                                autoCapitalize="none"
+                              />
+                              <AnimatedPressable style={s.wordRowIcon} onPress={() => handleDeleteSavedWord(word)}>
+                                <Trash2 size={18} color="#E74C3C" />
+                              </AnimatedPressable>
+                            </View>
+                            <View style={s.wordCardDivider} />
                             <TextInput
-                              placeholder="Word"
+                              placeholder="Meaning"
                               placeholderTextColor={COLORS.warmgray}
-                              style={s.wordInputSaved}
-                              value={word.word}
+                              style={s.meaningInputSaved}
+                              value={word.meaning}
                               onChangeText={(val) => {
                                 setEditedSavedWords(prev =>
                                   prev.map((item, i) =>
-                                    i === index ? { ...item, word: val } : item
+                                    i === index ? { ...item, meaning: val } : item
                                   )
                                 );
                               }}
-                              autoCapitalize="none"
+                              multiline={true}
+                              textAlignVertical="top"
                             />
-                            <AnimatedPressable style={s.wordRowIcon} onPress={() => handleDeleteSavedWord(word)}>
-                              <Trash2 size={18} color="#E74C3C" />
-                            </AnimatedPressable>
                           </View>
-                          <View style={s.wordCardDivider} />
-                          <TextInput
-                            placeholder="Meaning"
-                            placeholderTextColor={COLORS.warmgray}
-                            style={s.meaningInputSaved}
-                            value={word.meaning}
-                            onChangeText={(val) => {
-                              setEditedSavedWords(prev =>
-                                prev.map((item, i) =>
-                                  i === index ? { ...item, meaning: val } : item
-                                )
-                              );
-                            }}
-                            multiline={true}
-                            textAlignVertical="top"
-                          />
                         </View>
+                        {hasErr && (
+                          <View style={s.inlineErrorRow}>
+                            <AlertCircle size={12} color="#EF4444" style={{ marginRight: 4 }} />
+                            <Text style={s.inlineErrorText}>
+                              {wordErr ? `Word: ${word.word.length}/100 chars ` : ''}
+                              {meaningErr ? `Meaning: ${word.meaning.length}/500 chars ` : ''}
+                              (Max: Word 100, Meaning 500)
+                            </Text>
+                          </View>
+                        )}
                       </View>
-                      {hasErr && (
-                        <View style={s.inlineErrorRow}>
-                          <AlertCircle size={12} color="#EF4444" style={{ marginRight: 4 }} />
-                          <Text style={s.inlineErrorText}>
-                            {wordErr ? `Word: ${word.word.length}/100 chars ` : ''}
-                            {meaningErr ? `Meaning: ${word.meaning.length}/500 chars ` : ''}
-                            (Max: Word 100, Meaning 500)
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-                  );
-                })}
+                    );
+                  })}
 
-                {vocabLines.map((line, index) => {
-                  const wordErr = line.word.length > 100;
-                  const meaningErr = line.meaning.length > 500;
-                  const hasErr = wordErr || meaningErr;
-                  return (
-                    <View key={`line-${index}`} style={{ marginBottom: 14 }}>
-                      <View style={s.wordRow}>
-                        <Text style={s.wordRowNum}>{editedSavedWords.length + index + 1}.</Text>
-                        <View style={[s.wordCardBox, hasErr && s.wordRowContentError]}>
-                          <View style={s.wordCardHeader}>
+                  {vocabLines.map((line, index) => {
+                    const wordErr = line.word.length > 100;
+                    const meaningErr = line.meaning.length > 500;
+                    const hasErr = wordErr || meaningErr;
+                    return (
+                      <View key={`line-${index}`} style={{ marginBottom: 14 }}>
+                        <View style={s.wordRow}>
+                          <Text style={s.wordRowNum}>{editedSavedWords.length + index + 1}.</Text>
+                          <View style={[s.wordCardBox, hasErr && s.wordRowContentError]}>
+                            <View style={s.wordCardHeader}>
+                              <TextInput
+                                placeholder="Word"
+                                placeholderTextColor={COLORS.warmgray}
+                                value={line.word}
+                                onChangeText={(val) => updateVocabLine(index, 'word', val)}
+                                style={s.wordInput}
+                                autoCapitalize="none"
+                              />
+                              <AnimatedPressable style={s.wordRowIcon} onPress={() => removeVocabLine(index)}>
+                                <Trash2 size={18} color="#E74C3C" />
+                              </AnimatedPressable>
+                            </View>
+                            <View style={s.wordCardDivider} />
                             <TextInput
-                              placeholder="Word"
+                              placeholder="Meaning"
                               placeholderTextColor={COLORS.warmgray}
-                              value={line.word}
-                              onChangeText={(val) => updateVocabLine(index, 'word', val)}
-                              style={s.wordInput}
-                              autoCapitalize="none"
+                              value={line.meaning}
+                              onChangeText={(val) => updateVocabLine(index, 'meaning', val)}
+                              style={s.meaningInput}
+                              multiline={true}
+                              textAlignVertical="top"
                             />
-                            <AnimatedPressable style={s.wordRowIcon} onPress={() => removeVocabLine(index)}>
-                              <Trash2 size={18} color="#E74C3C" />
-                            </AnimatedPressable>
                           </View>
-                          <View style={s.wordCardDivider} />
-                          <TextInput
-                            placeholder="Meaning"
-                            placeholderTextColor={COLORS.warmgray}
-                            value={line.meaning}
-                            onChangeText={(val) => updateVocabLine(index, 'meaning', val)}
-                            style={s.meaningInput}
-                            multiline={true}
-                            textAlignVertical="top"
-                          />
                         </View>
+                        {hasErr && (
+                          <View style={s.inlineErrorRow}>
+                            <AlertCircle size={12} color="#EF4444" style={{ marginRight: 4 }} />
+                            <Text style={s.inlineErrorText}>
+                              {wordErr ? `Word: ${line.word.length}/100 chars ` : ''}
+                              {meaningErr ? `Meaning: ${line.meaning.length}/500 chars ` : ''}
+                              (Max: Word 100, Meaning 500)
+                            </Text>
+                          </View>
+                        )}
                       </View>
-                      {hasErr && (
-                        <View style={s.inlineErrorRow}>
-                          <AlertCircle size={12} color="#EF4444" style={{ marginRight: 4 }} />
-                          <Text style={s.inlineErrorText}>
-                            {wordErr ? `Word: ${line.word.length}/100 chars ` : ''}
-                            {meaningErr ? `Meaning: ${line.meaning.length}/500 chars ` : ''}
-                            (Max: Word 100, Meaning 500)
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-                  );
-                })}
-                <AnimatedPressable onPress={addVocabLine} style={[s.addLineBtn, { alignSelf: 'center', marginTop: 32 }]}>
-                  <Plus size={24} color={COLORS.white} />
-                </AnimatedPressable>
-                <View style={{ height: 100 }} />
-              </ScrollView>
-            </View>
+                    );
+                  })}
+                  <AnimatedPressable onPress={addVocabLine} style={[s.addLineBtn, { alignSelf: 'center', marginTop: 32 }]}>
+                    <Plus size={24} color={COLORS.white} />
+                  </AnimatedPressable>
+                  <View style={{ height: 100 }} />
+                </ScrollView>
+              </View>
+            </KeyboardAvoidingView>
           </SafeAreaView>
         </Modal>
 
