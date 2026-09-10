@@ -19,6 +19,7 @@ import { formatLocalDateString } from '../../services/localData';
 import * as Crypto from 'expo-crypto';
 import { saveWordsBulk, deleteWord } from '../../db/queries';
 import { queueCloudChange } from '../../services/sync';
+import { generateDeterministicWordId } from '../../utils/idUtils';
 
 const WEEKDAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 const MONTHS = [
@@ -32,7 +33,7 @@ export default function CalendarScreen() {
   const insets = useSafeAreaInsets();
 
   const { focusDate } = useLocalSearchParams<{ focusDate?: string }>();
-  const { words, loadLocalDatabase, isDarkMode, draftVocabLines, resetDraftVocabLines } = useAppStore();
+  const { user, words, loadLocalDatabase, isDarkMode, draftVocabLines, resetDraftVocabLines } = useAppStore();
 
   const COLORS = isDarkMode ? APP_COLORS.dark : APP_COLORS.light;
   const THEME_COLORS = useMemo(() => ({ ...COLORS, gridLine: isDarkMode ? '#2A2A2A' : '#EDEDEB' }), [COLORS, isDarkMode]);
@@ -223,20 +224,22 @@ export default function CalendarScreen() {
         ? now.toISOString()
         : new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate(), 12, 0, 0).toISOString();
 
-      const newWords = validDrafts.map((entry) => ({
-        id: Crypto.randomUUID(),
-        word: entry.word.trim().toLowerCase(),
-        meaning: entry.meaning.trim(),
-        dateAdded: wordDate,
-        fsrsStability: 1.0,
-        fsrsDifficulty: 5.0,
-        fsrsLapses: 0,
-        fsrsReps: 0,
-        fsrsState: 'New',
-        lastReview: null,
-        nextReview: wordDate,
-        reviewCount: 0,
-      }));
+      const newWords = await Promise.all(
+        validDrafts.map(async (entry) => ({
+          id: await generateDeterministicWordId(user?.id, entry.word),
+          word: entry.word.trim().toLowerCase(),
+          meaning: entry.meaning.trim(),
+          dateAdded: wordDate,
+          fsrsStability: 1.0,
+          fsrsDifficulty: 5.0,
+          fsrsLapses: 0,
+          fsrsReps: 0,
+          fsrsState: 'New',
+          lastReview: null,
+          nextReview: wordDate,
+          reviewCount: 0,
+        }))
+      );
 
       const finalModifiedWords = modifiedWords.map(w => ({
         ...w,

@@ -1,8 +1,15 @@
 const express = require('express');
 const router = express.Router();
+const crypto = require('crypto');
 const { authenticateToken } = require('../middleware/auth.middleware');
 const prisma = require('../services/db.service');
 const { z } = require('zod');
+
+function getDeterministicWordId(userId, rawWord) {
+  const normalizedWord = rawWord.trim().toLowerCase().normalize('NFC');
+  const canonicalString = `${userId}:${normalizedWord}`;
+  return crypto.createHash('sha256').update(canonicalString).digest('hex');
+}
 
 // --- Zod Schemas ---
 
@@ -75,54 +82,45 @@ router.post('/', async (req, res) => {
           const parsedData = addDataSchema.parse(data);
           
           const wordKey = parsedData.word.trim().toLowerCase();
+          const canonicalId = wordId || getDeterministicWordId(userId, wordKey);
           const dateAdded = parsedData.dateAdded || new Date();
           const lastReview = parsedData.lastReview || null;
           const nextReview = parsedData.nextReview || dateAdded;
 
-          const existing = await prisma.word.findFirst({
+          await prisma.word.upsert({
             where: {
-              userId,
-              OR: [
-                { id: wordId },
-                { word: wordKey },
-              ],
-            },
-          });
-
-          if (existing) {
-            await prisma.word.update({
-              where: { id: existing.id },
-              data: {
-                meaning: parsedData.meaning.trim(),
-                fsrsStability: parsedData.fsrsStability,
-                fsrsDifficulty: parsedData.fsrsDifficulty,
-                fsrsLapses: parsedData.fsrsLapses,
-                fsrsReps: parsedData.fsrsReps,
-                fsrsState: parsedData.fsrsState,
-                lastReview: parsedData.lastReview,
-                nextReview: parsedData.nextReview,
-                reviewCount: parsedData.reviewCount,
-              },
-            });
-          } else {
-            await prisma.word.create({
-              data: {
-                id: wordId,
+              userId_word: {
                 userId,
                 word: wordKey,
-                meaning: parsedData.meaning.trim(),
-                dateAdded,
-                fsrsStability: parsedData.fsrsStability ?? 1.0,
-                fsrsDifficulty: parsedData.fsrsDifficulty ?? 5.0,
-                fsrsLapses: parsedData.fsrsLapses ?? 0,
-                fsrsReps: parsedData.fsrsReps ?? 0,
-                fsrsState: parsedData.fsrsState || 'New',
-                lastReview,
-                nextReview,
-                reviewCount: parsedData.reviewCount ?? 0,
               },
-            });
-          }
+            },
+            update: {
+              meaning: parsedData.meaning.trim(),
+              fsrsStability: parsedData.fsrsStability,
+              fsrsDifficulty: parsedData.fsrsDifficulty,
+              fsrsLapses: parsedData.fsrsLapses,
+              fsrsReps: parsedData.fsrsReps,
+              fsrsState: parsedData.fsrsState,
+              lastReview: parsedData.lastReview,
+              nextReview: parsedData.nextReview,
+              reviewCount: parsedData.reviewCount,
+            },
+            create: {
+              id: canonicalId,
+              userId,
+              word: wordKey,
+              meaning: parsedData.meaning.trim(),
+              dateAdded,
+              fsrsStability: parsedData.fsrsStability ?? 1.0,
+              fsrsDifficulty: parsedData.fsrsDifficulty ?? 5.0,
+              fsrsLapses: parsedData.fsrsLapses ?? 0,
+              fsrsReps: parsedData.fsrsReps ?? 0,
+              fsrsState: parsedData.fsrsState || 'New',
+              lastReview,
+              nextReview,
+              reviewCount: parsedData.reviewCount ?? 0,
+            },
+          });
         } else if (action === 'update' || action === 'review') {
           const rawUpdatedWord = data?.updatedWord || data;
           if (!rawUpdatedWord) {
@@ -160,21 +158,68 @@ router.post('/', async (req, res) => {
           // If no existing row was matched and word text + meaning are present, upsert to prevent review loss
           if (updateResult.count === 0) {
             if (wordKey && parsedData.meaning) {
-              await prisma.word.create({
+              const canonicalId = wordId || getDeterministicWordId(userId, wordKey);
+              try {
+                await prisma.word.create({
+                  data: {
+                    id: canonicalId,
+                    userId,
+                    word: wordKey,
+                    meaning: parsedData.meaning.trim(),
+                    dateAdded: parsedData.dateAdded || new Date(),
+                    fsrsStability: parsedData.fsrsStability ?? 1.0,
+                    fsrsDifficulty: parsedData.fsrsDifficulty ?? 5.0,
+                    fsrsLapses: parsedData.fsrsLapses ?? 0,
+                    fsrsReps: parsedData.fsrsReps ?? 0,
+                    fsrsState: parsedData.fsrsState || 'New',
+                    lastReview: parsedData.lastReview || null,
+                    nextReview: parsedData.nextReview || new Date(),
+                    reviewCount: parsedData.reviewCount ?? 0,
+                  },
+                });
+              } catch (createErr) {
+                if (createErr.code === 'P2002') {
+                  await prisma.word.update({
+                    where: {
+                      userId_word: {
+                        userId,
+                        word: wordKey,
+                      },
+                    },
+                    data: {
+                      meaning: parsedData.meaning.trim(),
+                      fsrsStability: parsedData.fsrsStability,
+                      fsrsDifficulty: parsedData.fsrsDifficulty,
+                      fsrsLapses: parsedData.fsrsLapses,
+                      fsrsReps: parsedData.fsrsReps,
+                      fsrsState: parsedData.fsrsState,
+                      lastReview: parsedData.lastReview,
+                      nextReview: parsedData.nextReview,
+                      reviewCount: parsedData.reviewCount,
+                    },
+                  });
+                } else {
+                  throw createErr;
+                }
+              }
+            } else if (wordKey) {
+              await prisma.word.update({
+                where: {
+                  userId_word: {
+                    userId,
+                    word: wordKey,
+                  },
+                },
                 data: {
-                  id: wordId,
-                  userId,
-                  word: wordKey,
-                  meaning: parsedData.meaning.trim(),
-                  dateAdded: parsedData.dateAdded || new Date(),
-                  fsrsStability: parsedData.fsrsStability ?? 1.0,
-                  fsrsDifficulty: parsedData.fsrsDifficulty ?? 5.0,
-                  fsrsLapses: parsedData.fsrsLapses ?? 0,
-                  fsrsReps: parsedData.fsrsReps ?? 0,
-                  fsrsState: parsedData.fsrsState || 'New',
-                  lastReview: parsedData.lastReview || null,
-                  nextReview: parsedData.nextReview || new Date(),
-                  reviewCount: parsedData.reviewCount ?? 0,
+                  meaning: parsedData.meaning ? parsedData.meaning.trim() : undefined,
+                  fsrsStability: parsedData.fsrsStability,
+                  fsrsDifficulty: parsedData.fsrsDifficulty,
+                  fsrsLapses: parsedData.fsrsLapses,
+                  fsrsReps: parsedData.fsrsReps,
+                  fsrsState: parsedData.fsrsState,
+                  lastReview: parsedData.lastReview,
+                  nextReview: parsedData.nextReview,
+                  reviewCount: parsedData.reviewCount,
                 },
               });
             } else {

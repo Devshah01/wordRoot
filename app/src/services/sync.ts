@@ -13,6 +13,7 @@ import {
 } from '../db/queries';
 import { api } from './api';
 import { Word, LocalWord, useAppStore } from '../store/useAppStore';
+import { generateDeterministicWordId } from '../utils/idUtils';
 
 let isSyncing = false;
 
@@ -79,21 +80,24 @@ async function persistDraftVocabLines(draftVocabLines: LocalWord[]): Promise<Wor
   const validDrafts = draftVocabLines.filter((l) => l.word.trim() && l.meaning.trim());
   if (validDrafts.length === 0) return [];
 
+  const userId = useAppStore.getState().user?.id;
   const now = new Date().toISOString();
-  const draftWords: Word[] = validDrafts.map((entry) => ({
-    id: Crypto.randomUUID(),
-    word: entry.word.trim().toLowerCase(),
-    meaning: entry.meaning.trim(),
-    dateAdded: now,
-    fsrsStability: 1.0,
-    fsrsDifficulty: 5.0,
-    fsrsLapses: 0,
-    fsrsReps: 0,
-    fsrsState: 'New',
-    lastReview: null,
-    nextReview: now,
-    reviewCount: 0,
-  }));
+  const draftWords: Word[] = await Promise.all(
+    validDrafts.map(async (entry) => ({
+      id: await generateDeterministicWordId(userId, entry.word),
+      word: entry.word.trim().toLowerCase(),
+      meaning: entry.meaning.trim(),
+      dateAdded: now,
+      fsrsStability: 1.0,
+      fsrsDifficulty: 5.0,
+      fsrsLapses: 0,
+      fsrsReps: 0,
+      fsrsState: 'New',
+      lastReview: null,
+      nextReview: now,
+      reviewCount: 0,
+    }))
+  );
 
   await saveWordsBulk(draftWords);
   return draftWords;

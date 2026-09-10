@@ -25,6 +25,7 @@ import {
 import * as Crypto from 'expo-crypto';
 import { saveWordsBulk, deleteWord } from '../../db/queries';
 import { queueCloudChange } from '../../services/sync';
+import { generateDeterministicWordId } from '../../utils/idUtils';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -288,20 +289,22 @@ export default function DashboardScreen() {
     }
 
     try {
-      const newWords = validEntries.map((entry) => ({
-        id: Crypto.randomUUID(),
-        word: entry.word.trim().toLowerCase(),
-        meaning: entry.meaning.trim(),
-        dateAdded: wordDate,
-        fsrsStability: 1.0,
-        fsrsDifficulty: 5.0,
-        fsrsLapses: 0,
-        fsrsReps: 0,
-        fsrsState: 'New',
-        lastReview: null,
-        nextReview: wordDate,
-        reviewCount: 0,
-      }));
+      const newWords = await Promise.all(
+        validEntries.map(async (entry) => ({
+          id: await generateDeterministicWordId(user?.id, entry.word),
+          word: entry.word.trim().toLowerCase(),
+          meaning: entry.meaning.trim(),
+          dateAdded: wordDate,
+          fsrsStability: 1.0,
+          fsrsDifficulty: 5.0,
+          fsrsLapses: 0,
+          fsrsReps: 0,
+          fsrsState: 'New',
+          lastReview: null,
+          nextReview: wordDate,
+          reviewCount: 0,
+        }))
+      );
 
       const finalModifiedWords = modifiedWords.map(w => ({
         ...w,
