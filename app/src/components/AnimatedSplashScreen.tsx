@@ -39,8 +39,8 @@ const waitForPlayerReady = async (
 
 const releasePlayer = (player: AudioPlayer | null) => {
   if (!player) return;
-  try { player.pause(); } catch {}
-  try { player.release(); } catch {}
+  try { player.pause(); } catch { }
+  try { player.release(); } catch { }
 };
 
 const AnimatedSvg = Animated.createAnimatedComponent(Svg);
@@ -103,12 +103,12 @@ export default function AnimatedSplashScreen({ onAnimationFinish }: { onAnimatio
         if (isCancelledOrStopped()) return;
 
         const spinPlayer = createAudioPlayer({ uri: spinAsset.localUri ?? spinAsset.uri });
-        
+
         spinPlayerRef.current = spinPlayer;
         spinPlayer.volume = 1;
 
         const ready = await waitForPlayerReady(spinPlayer, isCancelledOrStopped);
-        
+
         if (!ready || isCancelledOrStopped()) return;
 
         await spinPlayer.seekTo(0);
@@ -116,7 +116,7 @@ export default function AnimatedSplashScreen({ onAnimationFinish }: { onAnimatio
 
         const spinStopTimer = setTimeout(() => {
           if (isCancelledOrStopped()) return;
-          try { spinPlayer.pause(); } catch {}
+          try { spinPlayer.pause(); } catch { }
         }, 1000);
         timersRef.current.push(spinStopTimer);
 
