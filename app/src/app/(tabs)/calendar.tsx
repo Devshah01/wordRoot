@@ -160,6 +160,20 @@ export default function CalendarScreen() {
   };
 
   const handleSaveCalendarVocab = async () => {
+    // Check for partially filled draft lines (word without meaning or meaning without word)
+    const hasIncompleteDraft = calendarDrafts.some(
+      (line) => (line.word.trim() && !line.meaning.trim()) || (!line.word.trim() && line.meaning.trim())
+    );
+    // Check if any edited saved word was erased to empty
+    const hasIncompleteEdit = calendarEditedWords.some(
+      (editedWord) => (!editedWord.word.trim() || !editedWord.meaning.trim())
+    );
+
+    if (hasIncompleteDraft || hasIncompleteEdit) {
+      setErrorMessage('Word and meaning fields cannot be empty.');
+      return;
+    }
+
     const validDrafts = calendarDrafts.filter((line) => line.word.trim() && line.meaning.trim());
     
     // Find modified saved words

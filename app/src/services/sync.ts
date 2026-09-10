@@ -338,13 +338,14 @@ export const triggerSync = async (
           }
 
           if (response.failedIds && response.failedIds.length > 0) {
-            await incrementSyncQueueRetryCount(response.failedIds);
+            console.warn(`Purging ${response.failedIds.length} sync items rejected by server validation:`, response.failedIds);
+            await removeSyncQueueItems(response.failedIds);
           }
 
           await setSyncMetadata('last_push_at', new Date().toISOString());
         } else {
-          console.warn(`Sync chunk rejected by server: ${response?.error || 'Unknown error'}`);
-          await incrementSyncQueueRetryCount(chunkItemIds);
+          console.warn(`Sync chunk rejected by server: ${response?.error || 'Unknown error'}. Evicting rejected items.`);
+          await removeSyncQueueItems(chunkItemIds);
           anyBatchFailed = true;
           break;
         }
@@ -354,7 +355,8 @@ export const triggerSync = async (
         const isNetworkError = errorMsg.includes('Cannot reach server') || errorMsg.includes('Network request failed');
 
         if (!isNetworkError) {
-          await incrementSyncQueueRetryCount(chunkItemIds);
+          console.warn(`Evicting sync chunk due to non-network server error: ${errorMsg}`);
+          await removeSyncQueueItems(chunkItemIds);
         }
         anyBatchFailed = true;
         break;

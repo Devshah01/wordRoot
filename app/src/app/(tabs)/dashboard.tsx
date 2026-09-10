@@ -221,6 +221,20 @@ export default function DashboardScreen() {
   };
 
   const handleSaveVocab = async () => {
+    // Check for partially filled draft lines (word without meaning or meaning without word)
+    const hasIncompleteDraft = vocabLines.some(
+      (line) => (line.word.trim() && !line.meaning.trim()) || (!line.word.trim() && line.meaning.trim())
+    );
+    // Check if any edited saved word was erased to empty
+    const hasIncompleteEdit = editedSavedWords.some(
+      (editedWord) => (!editedWord.word.trim() || !editedWord.meaning.trim())
+    );
+
+    if (hasIncompleteDraft || hasIncompleteEdit) {
+      setErrorMessage('Word and meaning fields cannot be empty.');
+      return;
+    }
+
     const validEntries = vocabLines.filter((line) => line.word.trim() && line.meaning.trim());
 
     // Find modified saved words
