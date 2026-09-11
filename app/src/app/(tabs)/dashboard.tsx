@@ -322,14 +322,46 @@ export default function DashboardScreen() {
         }))
       );
 
-      const finalModifiedWords = modifiedWords.map(w => ({
-        ...w,
-        word: w.word.trim().toLowerCase(),
-        meaning: w.meaning.trim(),
-      }));
+      const modifiedWordsWithTextChange: Word[] = [];
+      const modifiedWordsMeaningOnly: Word[] = [];
 
-      if (newWords.length > 0 || finalModifiedWords.length > 0) {
-        await saveWordsBulk([...newWords, ...finalModifiedWords]);
+      await Promise.all(
+        modifiedWords.map(async (modWord) => {
+          const originalWord = words.find(w => w.id === modWord.id);
+          const trimmedWordText = modWord.word.trim().toLowerCase();
+          const trimmedMeaning = modWord.meaning.trim();
+
+          if (originalWord && originalWord.word.toLowerCase() !== trimmedWordText) {
+            // Text changed: generate new deterministic ID, delete old word, insert new word
+            const newId = await generateDeterministicWordId(user?.id, trimmedWordText);
+            modifiedWordsWithTextChange.push({
+              ...modWord,
+              id: newId,
+              word: trimmedWordText,
+              meaning: trimmedMeaning,
+            });
+            // Queue delete for old ID and delete locally
+            await deleteWord(originalWord.id);
+            await queueCloudChange(originalWord.id, 'delete', {});
+          } else {
+            // Only meaning changed or original not found: keep old ID
+            modifiedWordsMeaningOnly.push({
+              ...modWord,
+              word: trimmedWordText,
+              meaning: trimmedMeaning,
+            });
+          }
+        })
+      );
+
+      const wordsToSaveLocally = [
+        ...newWords,
+        ...modifiedWordsWithTextChange,
+        ...modifiedWordsMeaningOnly,
+      ];
+
+      if (wordsToSaveLocally.length > 0) {
+        await saveWordsBulk(wordsToSaveLocally);
       }
 
       for (const word of newWords) {
@@ -338,7 +370,13 @@ export default function DashboardScreen() {
         });
       }
 
-      for (const word of finalModifiedWords) {
+      for (const word of modifiedWordsWithTextChange) {
+        await queueCloudChange(word.id, 'add', {
+          ...word
+        });
+      }
+
+      for (const word of modifiedWordsMeaningOnly) {
         await queueCloudChange(word.id, 'update', {
           word: word.word,
           meaning: word.meaning,
