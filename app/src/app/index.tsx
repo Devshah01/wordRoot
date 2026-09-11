@@ -6,6 +6,7 @@ export default function Index() {
   const isLoading = useAppStore(state => state.isLoading);
   const hasCompletedOnboarding = useAppStore(state => state.hasCompletedOnboarding);
   const isAuthenticated = useAppStore(state => state.isAuthenticated);
+  const guestName = useAppStore(state => state.guestName);
   const isDarkMode = useAppStore(state => state.isDarkMode);
 
   if (isLoading) {
@@ -16,7 +17,7 @@ export default function Index() {
     );
   }
 
-  if (!hasCompletedOnboarding && !isAuthenticated) {
+  if (!isAuthenticated && (!hasCompletedOnboarding || !guestName || guestName.trim() === '')) {
     return <Redirect href="/onboarding" />;
   }
 

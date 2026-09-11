@@ -117,7 +117,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     await safeStorage.deleteItemAsync('auth_user');
     if (clearLocalData) {
       await clearAllLocalData();
-      set({ token: null, user: null, isAuthenticated: false, words: [] });
+      await AsyncStorage.removeItem('guest_name');
+      await AsyncStorage.removeItem('has_completed_onboarding');
+      set({ token: null, user: null, isAuthenticated: false, words: [], guestName: null, hasCompletedOnboarding: false });
     } else {
       set({ token: null, user: null, isAuthenticated: false });
     }
