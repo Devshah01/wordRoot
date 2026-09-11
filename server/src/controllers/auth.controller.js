@@ -263,6 +263,12 @@ async function forgotPassword(req, res) {
       },
     });
 
+    // Check if Brevo SMTP environment variables are configured
+    if (!process.env.BREVO_SMTP_LOGIN || !process.env.BREVO_SMTP_KEY) {
+      console.error('[Password Reset] Brevo SMTP configuration missing (BREVO_SMTP_LOGIN or BREVO_SMTP_KEY not set).');
+      return res.status(500).json({ error: 'Email service is not configured on the server. Please contact support.' });
+    }
+
     // Send email via Brevo
     try {
       await transporter.sendMail({
