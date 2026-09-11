@@ -15,7 +15,7 @@ import AnimatedPressable from '../../components/AnimatedPressable';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { ChevronLeft, ChevronRight, Trash2, Edit2, X, Search, BookOpen, ArrowLeft, Plus, AlertCircle } from 'lucide-react-native';
-import { useAppStore } from '../../store/useAppStore';
+import { useAppStore, Word } from '../../store/useAppStore';
 import { APP_COLORS } from '../../constants/theme';
 import { formatLocalDateString, parseDateSafe } from '../../services/localData';
 import * as Crypto from 'expo-crypto';

@@ -17,7 +17,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, runOnJS } from 'react-native-reanimated';
 import { router, useFocusEffect } from 'expo-router';
 import { Search, Bell, ArrowLeft, Plus, Library, BookPlus, Trash2, CheckCircle2, X, Sparkles, AlertCircle } from 'lucide-react-native';
-import { useAppStore } from '../../store/useAppStore';
+import { useAppStore, Word } from '../../store/useAppStore';
 import { APP_COLORS } from '../../constants/theme';
 import {
   computeLocalStats,
