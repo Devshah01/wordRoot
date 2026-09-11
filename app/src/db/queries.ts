@@ -1,5 +1,6 @@
 import { getDB } from './database';
 import { Word } from '../store/useAppStore';
+import { generateDeterministicWordId } from '../utils/idUtils';
 
 // --- Words Table Queries ---
 
@@ -111,4 +112,24 @@ export const clearAllLocalData = async () => {
     await db.runAsync('DELETE FROM sync_metadata;');
   });
 };
+
+// Migrate words created in guest mode to user-prefixed IDs upon authentication
+export const migrateGuestWordsToUser = async (userId: string): Promise<void> => {
+  if (!userId) return;
+  const db = await getDB();
+  const words = await getWords();
+
+  await db.withTransactionAsync(async () => {
+    for (const word of words) {
+      const oldId = word.id;
+      const newId = await generateDeterministicWordId(userId, word.word);
+
+      if (oldId !== newId) {
+        await db.runAsync('UPDATE words SET id = ? WHERE id = ?;', [newId, oldId]);
+        await db.runAsync('UPDATE sync_queue SET wordId = ? WHERE wordId = ?;', [newId, oldId]);
+      }
+    }
+  });
+};
+
 

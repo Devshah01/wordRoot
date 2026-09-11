@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { getWords, clearAllLocalData } from '../db/queries';
+import { getWords, clearAllLocalData, migrateGuestWordsToUser } from '../db/queries';
 import { initDB } from '../db/database';
 
 const safeStorage = {
@@ -102,7 +102,14 @@ export const useAppStore = create<AppState>((set, get) => ({
     const userWithDefaults = { ...user, notificationTime: user.notificationTime ?? '09:00' };
     await safeStorage.setItemAsync('auth_token', token);
     await safeStorage.setItemAsync('auth_user', JSON.stringify(userWithDefaults));
-    set({ token, user: userWithDefaults, isAuthenticated: true });
+    
+    // Automatically migrate any words created in guest mode to user-prefixed IDs
+    if (userWithDefaults.id) {
+      await migrateGuestWordsToUser(userWithDefaults.id);
+    }
+    const updatedWords = await getWords();
+
+    set({ token, user: userWithDefaults, isAuthenticated: true, words: updatedWords });
   },
 
   clearAuth: async (clearLocalData: boolean = false) => {
