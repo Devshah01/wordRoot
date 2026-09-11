@@ -268,7 +268,7 @@ export default function CalendarScreen() {
             });
             // Queue delete for old ID and delete locally
             await deleteWord(originalWord.id);
-            await queueCloudChange(originalWord.id, 'delete', {});
+            await queueCloudChange(originalWord.id, 'delete', { word: originalWord.word });
           } else {
             // Only meaning changed or original not found: keep old ID
             modifiedWordsMeaningOnly.push({
@@ -325,7 +325,7 @@ export default function CalendarScreen() {
     try {
       setErrorMessage(null);
       await deleteWord(word.id);
-      await queueCloudChange(word.id, 'delete', {});
+      await queueCloudChange(word.id, 'delete', { word: word.word });
       setCalendarEditedWords(prev => prev.filter(w => w.id !== word.id));
       await loadLocalDatabase();
     } catch (err: any) { setErrorMessage(err.message || 'Failed to delete word'); }

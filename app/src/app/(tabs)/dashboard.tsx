@@ -342,7 +342,7 @@ export default function DashboardScreen() {
             });
             // Queue delete for old ID and delete locally
             await deleteWord(originalWord.id);
-            await queueCloudChange(originalWord.id, 'delete', {});
+            await queueCloudChange(originalWord.id, 'delete', { word: originalWord.word });
           } else {
             // Only meaning changed or original not found: keep old ID
             modifiedWordsMeaningOnly.push({
@@ -399,7 +399,7 @@ export default function DashboardScreen() {
     try {
       setErrorMessage(null);
       await deleteWord(wordObj.id);
-      await queueCloudChange(wordObj.id, 'delete', {});
+      await queueCloudChange(wordObj.id, 'delete', { word: wordObj.word });
       setEditedSavedWords(prev => prev.filter(w => w.id !== wordObj.id));
       await fetchDashboardData();
     } catch (e: any) {
