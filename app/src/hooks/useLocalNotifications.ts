@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react';
-import * as Device from 'expo-device';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { Platform } from 'react-native';
 import { useAppStore } from '../store/useAppStore';

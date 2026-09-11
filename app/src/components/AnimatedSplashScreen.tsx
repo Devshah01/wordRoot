@@ -56,7 +56,9 @@ export default function AnimatedSplashScreen({ onAnimationFinish }: { onAnimatio
 
   // Keep a stable ref to onAnimationFinish so we never need it in the effect deps
   const onFinishRef = useRef(onAnimationFinish);
-  onFinishRef.current = onAnimationFinish;
+  useEffect(() => {
+    onFinishRef.current = onAnimationFinish;
+  }, [onAnimationFinish]);
 
   const audioStopped = useRef(false);
   const hasFinishedRef = useRef(false);

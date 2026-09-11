@@ -1,10 +1,7 @@
 import NetInfo from '@react-native-community/netinfo';
-import * as Crypto from 'expo-crypto';
 import {
   getSyncQueue,
-  clearSyncQueue,
   removeSyncQueueItems,
-  incrementSyncQueueRetryCount,
   getWords,
   saveWordsBulk,
   addSyncQueueItem,

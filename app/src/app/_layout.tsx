@@ -1,6 +1,6 @@
 import { Stack } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { LogBox, Platform, View, StyleSheet, StatusBar } from 'react-native';
+import { LogBox, View, StyleSheet, StatusBar } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { 
   useFonts, 
