@@ -37,6 +37,8 @@ const addDataSchema = fsrsSchema.extend({
 });
 
 const updatedWordSchema = fsrsSchema.extend({
+  oldId: z.string().optional(),
+  newId: z.string().optional(),
   word: z.string().min(1).max(100, "Word must be 100 characters or less").optional(),
   meaning: z.string().min(1).max(500, "Meaning must be 500 characters or less").optional(),
   dateAdded: validCoercedDate.optional(),
@@ -135,14 +137,17 @@ router.post('/', async (req, res) => {
           
           // Validate update data
           const parsedData = updatedWordSchema.parse(rawUpdatedWord);
+          const oldId = data?.oldId || rawUpdatedWord.oldId || wordId;
           const wordKey = parsedData.word ? parsedData.word.trim().toLowerCase() : undefined;
+          const newId = data?.newId || rawUpdatedWord.newId || (wordKey ? getDeterministicWordId(userId, wordKey) : wordId);
           
-          const orConditions = [{ id: wordId }];
+          const orConditions = [{ id: oldId }, { id: newId }];
           if (wordKey) {
             orConditions.push({ word: wordKey });
           }
 
           const updateData = {
+            id: newId,
             fsrsStability: parsedData.fsrsStability,
             fsrsDifficulty: parsedData.fsrsDifficulty,
             fsrsLapses: parsedData.fsrsLapses,
@@ -171,7 +176,7 @@ router.post('/', async (req, res) => {
           // If no existing row was matched and word text + meaning are present, upsert to prevent review loss
           if (updateResult.count === 0) {
             if (wordKey && parsedData.meaning) {
-              const canonicalId = wordId || getDeterministicWordId(userId, wordKey);
+              const canonicalId = newId || getDeterministicWordId(userId, wordKey);
               try {
                 await prisma.word.create({
                   data: {

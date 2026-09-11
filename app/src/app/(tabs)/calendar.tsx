@@ -248,7 +248,7 @@ export default function CalendarScreen() {
         }))
       );
 
-      const modifiedWordsWithTextChange: Word[] = [];
+      const modifiedWordsWithTextChange: (Word & { oldId?: string })[] = [];
       const modifiedWordsMeaningOnly: Word[] = [];
 
       await Promise.all(
@@ -258,17 +258,17 @@ export default function CalendarScreen() {
           const trimmedMeaning = modWord.meaning.trim();
 
           if (originalWord && originalWord.word.toLowerCase() !== trimmedWordText) {
-            // Text changed: generate new deterministic ID, delete old word, insert new word
+            // Text changed: generate new deterministic ID, remove old ID locally, insert updated word
             const newId = await generateDeterministicWordId(user?.id, trimmedWordText);
             modifiedWordsWithTextChange.push({
               ...modWord,
               id: newId,
               word: trimmedWordText,
               meaning: trimmedMeaning,
+              oldId: originalWord.id,
             });
-            // Queue delete for old ID and delete locally
+            // Delete old record from local SQLite to prevent duplicate local rows
             await deleteWord(originalWord.id);
-            await queueCloudChange(originalWord.id, 'delete', { word: originalWord.word });
           } else {
             // Only meaning changed or original not found: keep old ID
             modifiedWordsMeaningOnly.push({
@@ -297,8 +297,12 @@ export default function CalendarScreen() {
       }
 
       for (const word of modifiedWordsWithTextChange) {
-        await queueCloudChange(word.id, 'add', {
-          ...word
+        await queueCloudChange(word.oldId || word.id, 'update', {
+          oldId: word.oldId,
+          newId: word.id,
+          word: word.word,
+          meaning: word.meaning,
+          updatedWord: word,
         });
       }
 
