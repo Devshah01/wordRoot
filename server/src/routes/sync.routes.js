@@ -13,27 +13,33 @@ function getDeterministicWordId(userId, rawWord) {
 
 // --- Zod Schemas ---
 
+const validCoercedDate = z.coerce
+  .date()
+  .refine((val) => !val || !isNaN(val.getTime()), {
+    message: 'Invalid date format',
+  });
+
 const fsrsSchema = z.object({
   fsrsStability: z.number().optional(),
   fsrsDifficulty: z.number().optional(),
   fsrsLapses: z.number().int().optional(),
   fsrsReps: z.number().int().optional(),
   fsrsState: z.string().optional(),
-  lastReview: z.coerce.date().nullable().optional(),
-  nextReview: z.coerce.date().nullable().optional(),
+  lastReview: validCoercedDate.nullable().optional(),
+  nextReview: validCoercedDate.nullable().optional(),
   reviewCount: z.number().int().optional(),
 });
 
 const addDataSchema = fsrsSchema.extend({
   word: z.string().min(1, "Word is required").max(100, "Word must be 100 characters or less"),
   meaning: z.string().min(1, "Meaning is required").max(500, "Meaning must be 500 characters or less"),
-  dateAdded: z.coerce.date().optional(),
+  dateAdded: validCoercedDate.optional(),
 });
 
 const updatedWordSchema = fsrsSchema.extend({
   word: z.string().min(1).max(100, "Word must be 100 characters or less").optional(),
   meaning: z.string().min(1).max(500, "Meaning must be 500 characters or less").optional(),
-  dateAdded: z.coerce.date().optional(),
+  dateAdded: validCoercedDate.optional(),
 });
 
 const syncItemSchema = z.object({
