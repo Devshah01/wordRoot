@@ -102,7 +102,6 @@ export default function OnboardingScreen() {
                 onChangeText={setName}
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => setIsFocused(false)}
-                autoFocus
                 returnKeyType="done"
                 onSubmitEditing={handleContinue}
                 maxLength={30}
