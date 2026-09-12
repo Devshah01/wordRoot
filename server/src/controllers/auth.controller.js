@@ -435,6 +435,11 @@ async function sendOtp(req, res) {
       if (existingUser) {
         return res.status(400).json({ error: 'Email is already registered. Please sign in.' });
       }
+    } else {
+      const existingUser = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+      if (!existingUser) {
+        return res.status(404).json({ error: 'No account found with this email. Please sign up first.' });
+      }
     }
 
     // Generate a 6-digit OTP code using crypto
@@ -546,6 +551,9 @@ async function verifyOtp(req, res) {
     let user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
 
     if (!user) {
+      if (!isSignUp) {
+        return res.status(404).json({ error: 'No account found with this email. Please sign up first.' });
+      }
       const finalUsername = (username && String(username).trim()) || normalizedEmail.split('@')[0];
       user = await prisma.user.create({
         data: {
