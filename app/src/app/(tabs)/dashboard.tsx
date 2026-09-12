@@ -555,7 +555,7 @@ export default function DashboardScreen() {
           {/* Stats Column */}
           <View style={[s.statsColumn, { flex: 1 }]}>
             <View style={{ flex: 1 }}>
-              <View style={[s.statCardLarge, { flex: 1, justifyContent: 'center', gap: 12 }]}>
+              <View style={[s.statCardLarge, { flex: 1 }]}>
                 <View style={s.statCardHeader}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <View style={s.statDot} />
@@ -565,15 +565,17 @@ export default function DashboardScreen() {
                   </View>
                   <BookPlus size={20} color={COLORS.warmgray} strokeWidth={2} />
                 </View>
-                <View style={s.statBottom}>
-                  <Text style={s.statValueSmall}>{displayWordsAddedToday}</Text>
-                  <Text style={s.statSuffix}>Added</Text>
+                <View style={s.statCenterContent}>
+                  <View style={s.statBottom}>
+                    <Text style={s.statValueSmall}>{displayWordsAddedToday}</Text>
+                    <Text style={s.statSuffix}>Added</Text>
+                  </View>
                 </View>
               </View>
             </View>
 
             <View style={{ flex: 1 }}>
-              <View style={[s.statCardLarge, { flex: 1, justifyContent: 'center', gap: 12 }]}>
+              <View style={[s.statCardLarge, { flex: 1 }]}>
                 <View style={s.statCardHeader}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <View style={[s.statDot, { backgroundColor: COLORS.warmgray }]} />
@@ -581,9 +583,11 @@ export default function DashboardScreen() {
                   </View>
                   <Library size={20} color={COLORS.warmgray} strokeWidth={2} />
                 </View>
-                <View style={s.statBottom}>
-                  <Text style={s.statValueSmall}>{displayTotalWords.toLocaleString()}</Text>
-                  <Text style={s.statSuffix}>Total Words</Text>
+                <View style={s.statCenterContent}>
+                  <View style={s.statBottom}>
+                    <Text style={s.statValueSmall}>{displayTotalWords.toLocaleString()}</Text>
+                    <Text style={s.statSuffix}>Total Words</Text>
+                  </View>
                 </View>
               </View>
             </View>
@@ -991,7 +995,7 @@ const getStyles = (COLORS: any, isDarkMode: boolean) => StyleSheet.create({
     backgroundColor: COLORS.white,
     borderRadius: 18,
     paddingHorizontal: 16,
-    paddingTop: 24,
+    paddingTop: 16,
     paddingBottom: 16,
     borderWidth: 1,
     borderColor: COLORS.bone,
@@ -1005,14 +1009,18 @@ const getStyles = (COLORS: any, isDarkMode: boolean) => StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 0,
+  },
+  statCenterContent: {
+    flex: 1,
+    justifyContent: 'center',
   },
   statDot: {
     width: 8, height: 8, borderRadius: 4,
     backgroundColor: COLORS.charcoal,
   },
   statLabelSmall: { fontFamily: 'Inter_500Medium', fontSize: 13, color: COLORS.warmgray },
-  statBottom: { flexDirection: 'row', alignItems: 'baseline', gap: 6, transform: [{ translateY: -8 }] },
+  statBottom: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
   statValueSmall: { fontFamily: 'Outfit_700Bold', fontSize: 22, color: COLORS.charcoal },
   statSuffix: { fontFamily: 'Inter_500Medium', fontSize: 14, color: COLORS.warmgray },
 
