@@ -39,6 +39,8 @@ const resetLimiter = rateLimit({
 
 const { authenticateToken } = require('../middleware/auth.middleware');
 
+router.post('/send-otp', resetLimiter, authController.sendOtp);
+router.post('/verify-otp', authLimiter, authController.verifyOtp);
 router.post('/register', authLimiter, authController.register);
 router.post('/login', authLimiter, authController.login);
 router.post('/google', googleAuthLimiter, authController.googleAuth);

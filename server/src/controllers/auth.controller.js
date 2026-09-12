@@ -407,6 +407,161 @@ async function deleteAccount(req, res) {
     console.error('Delete account error:', error);
     res.status(500).json({ error: 'Failed to delete account. Please try again.' });
   }
+// 6. Send OTP
+async function sendOtp(req, res) {
+  try {
+    const { email, username, isSignUp } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    const normalizedEmail = String(email).trim().toLowerCase();
+
+    if (!EMAIL_REGEX.test(normalizedEmail)) {
+      return res.status(400).json({ error: 'Please enter a valid email address' });
+    }
+
+    if (isSignUp) {
+      if (username) {
+        const trimmedUsername = String(username).trim();
+        if (trimmedUsername.length < 2 || trimmedUsername.length > 50) {
+          return res.status(400).json({ error: 'Username must be between 2 and 50 characters' });
+        }
+      }
+      const existingUser = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+      if (existingUser) {
+        return res.status(400).json({ error: 'Email is already registered. Please sign in.' });
+      }
+    }
+
+    // Generate a 6-digit OTP code using crypto
+    const code = String(crypto.randomInt(100000, 1000000));
+    const codeHash = await bcrypt.hash(code, 10);
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+    // Store in PostgreSQL database
+    await prisma.passwordReset.upsert({
+      where: { email: normalizedEmail },
+      create: {
+        email: normalizedEmail,
+        codeHash,
+        expiresAt,
+      },
+      update: {
+        codeHash,
+        expiresAt,
+      },
+    });
+
+    // Check if Brevo SMTP is configured
+    if (!process.env.BREVO_SMTP_LOGIN || !process.env.BREVO_SMTP_KEY) {
+      console.log(`[OTP Dev Fallback] Code for ${normalizedEmail} is ${code}`);
+      return res.json({ message: 'Verification code generated' });
+    }
+
+    // Send email via Brevo
+    try {
+      await transporter.sendMail({
+        from: process.env.BREVO_SENDER_EMAIL || '"WordRoot Auth" <wordroot.app@gmail.com>',
+        to: normalizedEmail,
+        subject: 'Your Verification Code - WordRoot',
+        text: `Your WordRoot verification code is: ${code}\n\nIt expires in 15 minutes.`,
+        html: `
+          <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #FBFBFA; padding: 40px 20px; color: #1A1A1A;">
+            <div style="max-width: 500px; margin: 0 auto; background-color: #FFFFFF; padding: 40px; border-radius: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid #EAEAEA;">
+              
+              <div style="text-align: center; margin-bottom: 32px;">
+                <img src="https://raw.githubusercontent.com/Devshah01/wordRoot/main/app-icon-transparent-512.png" alt="WordRoot" style="width: 64px; height: 64px; border-radius: 16px;" />
+                <h1 style="font-size: 24px; margin-top: 16px; margin-bottom: 0; font-weight: 700; color: #1A1A1A;">WordRoot</h1>
+              </div>
+
+              <h2 style="font-size: 20px; font-weight: 600; margin-bottom: 16px; color: #1A1A1A;">Verification Code</h2>
+              <p style="font-size: 15px; line-height: 1.6; color: #4A4A4A; margin-bottom: 32px;">
+                Your 6-digit verification code to sign in to WordRoot is:
+              </p>
+
+              <div style="text-align: center; margin-bottom: 32px;">
+                <div style="background-color: #F5F5F5; border-radius: 16px; padding: 20px; display: inline-block; border: 1px solid #EAEAEA;">
+                  <span style="font-size: 32px; font-weight: 700; letter-spacing: 6px; color: #1A1A1A; margin-left: 6px;">${code}</span>
+                </div>
+              </div>
+
+              <p style="font-size: 14px; color: #71717A; line-height: 1.5; margin-bottom: 0;">
+                This code expires in 15 minutes. If you didn't request this code, you can safely ignore this email.
+              </p>
+
+            </div>
+          </div>
+        `,
+      });
+      console.log(`[OTP Auth] Email sent to ${normalizedEmail}`);
+    } catch (emailErr) {
+      console.error('Failed to send OTP email via Brevo:', emailErr);
+      return res.status(500).json({ error: 'Failed to send verification email. Please try again later.' });
+    }
+
+    res.json({ message: 'Verification code sent' });
+  } catch (error) {
+    console.error('sendOtp error:', error);
+    res.status(500).json({ error: 'Failed to send verification code' });
+  }
+}
+
+// 7. Verify OTP
+async function verifyOtp(req, res) {
+  try {
+    const { email, code, username, isSignUp } = req.body;
+
+    if (!email || !code) {
+      return res.status(400).json({ error: 'Email and verification code are required' });
+    }
+
+    const normalizedEmail = String(email).trim().toLowerCase();
+
+    const otpRecord = await prisma.passwordReset.findUnique({
+      where: { email: normalizedEmail },
+    });
+
+    if (!otpRecord) {
+      return res.status(400).json({ error: 'No verification code found. Please request a new code.' });
+    }
+
+    if (new Date() > otpRecord.expiresAt) {
+      await prisma.passwordReset.delete({ where: { email: normalizedEmail } }).catch(() => {});
+      return res.status(400).json({ error: 'Verification code has expired. Please request a new one.' });
+    }
+
+    const isValid = await bcrypt.compare(String(code), otpRecord.codeHash);
+    if (!isValid) {
+      return res.status(400).json({ error: 'Invalid verification code' });
+    }
+
+    // Code is valid! Clean up OTP record
+    await prisma.passwordReset.delete({ where: { email: normalizedEmail } }).catch(() => {});
+
+    // Find or create user
+    let user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+
+    if (!user) {
+      const finalUsername = (username && String(username).trim()) || normalizedEmail.split('@')[0];
+      user = await prisma.user.create({
+        data: {
+          username: finalUsername,
+          email: normalizedEmail,
+        },
+      });
+    }
+
+    const token = generateToken(user);
+    res.json({
+      token,
+      user: { id: user.id, username: user.username, email: user.email },
+    });
+  } catch (error) {
+    console.error('verifyOtp error:', error);
+    res.status(500).json({ error: 'Failed to verify OTP' });
+  }
 }
 
 module.exports = {
@@ -416,4 +571,7 @@ module.exports = {
   forgotPassword,
   resetPassword,
   deleteAccount,
+  sendOtp,
+  verifyOtp,
 };
+
