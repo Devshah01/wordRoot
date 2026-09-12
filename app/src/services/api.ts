@@ -62,6 +62,10 @@ async function request(endpoint: string, options: RequestInit = {}) {
 
 export const api = {
   auth: {
+    sendOtp: (body: { email: string; username?: string; isSignUp?: boolean }) =>
+      request('/api/auth/send-otp', { method: 'POST', body: JSON.stringify(body) }),
+    verifyOtp: (body: { email: string; code: string; username?: string; isSignUp?: boolean }) =>
+      request('/api/auth/verify-otp', { method: 'POST', body: JSON.stringify(body) }),
     register: (body: any) =>
       request('/api/auth/register', { method: 'POST', body: JSON.stringify(body) }),
     login: (body: any) =>

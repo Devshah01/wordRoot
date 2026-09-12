@@ -13,7 +13,7 @@ import {
 import AnimatedPressable from '../../components/AnimatedPressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { Mail, Lock, User, Globe, ArrowLeft, Eye, EyeOff } from 'lucide-react-native';
+import { Mail, User, Globe, ArrowLeft, KeyRound, RefreshCw } from 'lucide-react-native';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { useAppStore } from '../../store/useAppStore';
 import { api } from '../../services/api';
@@ -24,20 +24,33 @@ GoogleSignin.configure({
   webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '',
 });
 
-
 export default function AuthScreen() {
   const { setAuth, loadLocalDatabase, draftVocabLines, resetDraftVocabLines, isDarkMode } = useAppStore();
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [successMsg, setSuccessMsg] = useState('');
 
+  // 2-Step OTP State: 'request' | 'verify'
+  const [step, setStep] = useState<'request' | 'verify'>('request');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [resendTimer, setResendTimer] = useState(0);
 
   const COLORS = isDarkMode ? APP_COLORS.dark : APP_COLORS.light;
   const s = useMemo(() => getStyles(COLORS, isDarkMode), [COLORS, isDarkMode]);
+
+  // Resend Timer Countdown
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [resendTimer]);
 
   const runPostAuthSync = useCallback(() => {
     performCloudSync({
@@ -67,14 +80,16 @@ export default function AuthScreen() {
     }
   }, [runPostAuthSync, setAuth]);
 
-  const handleAuthAction = async () => {
+  // Step 1: Send OTP to Email
+  const handleRequestOtp = async () => {
     setErrorMsg('');
+    setSuccessMsg('');
     const trimmedEmail = email.trim().toLowerCase();
     const trimmedUsername = username.trim();
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    if (!trimmedEmail || !password.trim()) {
-      setErrorMsg('Email and password are required');
+    if (!trimmedEmail) {
+      setErrorMsg('Email address is required');
       return;
     }
     if (!emailRegex.test(trimmedEmail)) {
@@ -90,32 +105,56 @@ export default function AuthScreen() {
         setErrorMsg('Username must be at least 2 characters');
         return;
       }
-      if (password.length < 8) {
-        setErrorMsg('Password must be at least 8 characters long');
-        return;
-      }
     }
 
     setLoading(true);
     try {
-      let response;
-      if (isSignUp) {
-        response = await api.auth.register({
-          username: trimmedUsername,
-          email: trimmedEmail,
-          password,
-        });
-      } else {
-        response = await api.auth.login({
-          email: trimmedEmail,
-          password,
-        });
-      }
+      await api.auth.sendOtp({
+        email: trimmedEmail,
+        username: isSignUp ? trimmedUsername : undefined,
+        isSignUp,
+      });
+      setStep('verify');
+      setResendTimer(30);
+      setSuccessMsg(`We sent a 6-digit code to ${trimmedEmail}`);
+    } catch (err: any) {
+      // Fallback: If backend uses register/login directly or errors
+      setErrorMsg(err.message || 'Failed to send verification code. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Step 2: Verify OTP Code
+  const handleVerifyOtp = async () => {
+    setErrorMsg('');
+    setSuccessMsg('');
+    const trimmedCode = otpCode.trim();
+    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedUsername = username.trim();
+
+    if (!trimmedCode) {
+      setErrorMsg('Please enter the 6-digit verification code');
+      return;
+    }
+    if (trimmedCode.length < 4) {
+      setErrorMsg('Invalid verification code length');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await api.auth.verifyOtp({
+        email: trimmedEmail,
+        code: trimmedCode,
+        username: isSignUp ? trimmedUsername : undefined,
+        isSignUp,
+      });
       await setAuth(response.token, response.user);
       router.replace('/(tabs)/dashboard');
       runPostAuthSync();
     } catch (err: any) {
-      setErrorMsg(err.message || 'Authentication failed');
+      setErrorMsg(err.message || 'Invalid or expired verification code');
     } finally {
       setLoading(false);
     }
@@ -128,7 +167,6 @@ export default function AuthScreen() {
       const userInfo = await GoogleSignin.signIn();
       let idToken = userInfo.data?.idToken || (userInfo as any).idToken;
 
-      // Fallback: If idToken is not directly returned, attempt fetching tokens from Google Play Services
       if (!idToken) {
         try {
           const tokens = await GoogleSignin.getTokens();
@@ -147,7 +185,7 @@ export default function AuthScreen() {
       if (error.code === statusCodes.SIGN_IN_CANCELLED) {
         // user cancelled the login flow
       } else if (error.code === statusCodes.IN_PROGRESS) {
-        // operation (e.g. sign in) is in progress already
+        // operation in progress
       } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
         setErrorMsg('Play services not available or outdated');
       } else {
@@ -170,14 +208,24 @@ export default function AuthScreen() {
           automaticallyAdjustKeyboardInsets={true}
         >
           <AnimatedPressable
-            onPress={() => router.replace('/(tabs)/dashboard')}
+            onPress={() => {
+              if (step === 'verify') {
+                setStep('request');
+                setErrorMsg('');
+                setSuccessMsg('');
+              } else {
+                router.replace('/(tabs)/dashboard');
+              }
+            }}
             style={s.backBtn}
           >
             <ArrowLeft size={20} color={COLORS.charcoal} />
           </AnimatedPressable>
 
           <View style={s.titleSection}>
-            <Text style={s.welcomeText}>Sync your vocabulary</Text>
+            <Text style={s.welcomeText}>
+              {step === 'verify' ? 'Verify Your Email' : 'Sync your vocabulary'}
+            </Text>
             <View style={s.brandRow}>
               <Image
                 source={require('../../../assets/images/icon.png')}
@@ -187,7 +235,9 @@ export default function AuthScreen() {
               <Text style={s.brandText}>WordRoot</Text>
             </View>
             <Text style={s.subtitle}>
-              {isSignUp
+              {step === 'verify'
+                ? `Enter the 6-digit verification code sent to ${email.trim().toLowerCase()}`
+                : isSignUp
                 ? 'Create an account to back up and sync across devices. The app keeps working offline.'
                 : 'Sign in to sync your words across devices. Daily use stays fully offline.'}
             </Text>
@@ -199,107 +249,149 @@ export default function AuthScreen() {
             </View>
           ) : null}
 
-          <View style={s.form}>
-            {isSignUp && (
+          {successMsg ? (
+            <View style={s.successBox}>
+              <Text style={s.successText}>{successMsg}</Text>
+            </View>
+          ) : null}
+
+          {step === 'request' ? (
+            /* STEP 1: Request OTP Form */
+            <View style={s.form}>
+              {isSignUp && (
+                <View style={s.inputRow}>
+                  <User size={18} color={COLORS.warmgray} />
+                  <TextInput
+                    placeholder="User Name"
+                    placeholderTextColor={COLORS.warmgray}
+                    value={username}
+                    onChangeText={setUsername}
+                    style={s.input}
+                    autoCapitalize="none"
+                  />
+                </View>
+              )}
+
               <View style={s.inputRow}>
-                <User size={18} color={COLORS.warmgray} />
+                <Mail size={18} color={COLORS.warmgray} />
                 <TextInput
-                  placeholder="User Name"
+                  placeholder="Email Address"
                   placeholderTextColor={COLORS.warmgray}
-                  value={username}
-                  onChangeText={setUsername}
+                  value={email}
+                  onChangeText={setEmail}
                   style={s.input}
+                  keyboardType="email-address"
                   autoCapitalize="none"
                 />
               </View>
-            )}
 
-            <View style={s.inputRow}>
-              <Mail size={18} color={COLORS.warmgray} />
-              <TextInput
-                placeholder="Email"
-                placeholderTextColor={COLORS.warmgray}
-                value={email}
-                onChangeText={setEmail}
-                style={s.input}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            </View>
-
-            <View style={s.inputRow}>
-              <Lock size={18} color={COLORS.warmgray} />
-              <TextInput
-                placeholder="Password"
-                placeholderTextColor={COLORS.warmgray}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                style={s.input}
-              />
-              <AnimatedPressable onPress={() => setShowPassword(!showPassword)}>
-                {showPassword ? (
-                  <EyeOff size={18} color={COLORS.warmgray} />
+              <AnimatedPressable
+                onPress={handleRequestOtp}
+                disabled={loading}
+                style={s.primaryBtn}
+              >
+                {loading ? (
+                  <ActivityIndicator size="small" color={COLORS.bg} />
                 ) : (
-                  <Eye size={18} color={COLORS.warmgray} />
+                  <Text style={s.primaryBtnText}>
+                    Get Verification Code
+                  </Text>
                 )}
               </AnimatedPressable>
+
+              <View style={s.dividerRow}>
+                <View style={s.dividerLine} />
+                <Text style={s.dividerText}>or</Text>
+                <View style={s.dividerLine} />
+              </View>
+
+              <AnimatedPressable
+                onPress={handleGoogleAuth}
+                disabled={loading}
+                style={[s.googleBtn, loading && { opacity: 0.6 }]}
+              >
+                <Globe size={18} color={COLORS.charcoal} />
+                <Text style={s.googleBtnText}>Continue with Google</Text>
+              </AnimatedPressable>
+
+              <View style={s.toggleRow}>
+                <Text style={s.toggleText}>
+                  {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
+                </Text>
+                <AnimatedPressable
+                  onPress={() => {
+                    setIsSignUp(!isSignUp);
+                    setErrorMsg('');
+                    setSuccessMsg('');
+                  }}
+                >
+                  <Text style={s.toggleLink}>
+                    {isSignUp ? 'Sign In' : 'Sign Up'}
+                  </Text>
+                </AnimatedPressable>
+              </View>
             </View>
-          </View>
+          ) : (
+            /* STEP 2: Verify OTP Form */
+            <View style={s.form}>
+              <View style={s.inputRow}>
+                <KeyRound size={18} color={COLORS.warmgray} />
+                <TextInput
+                  placeholder="6-Digit Verification Code"
+                  placeholderTextColor={COLORS.warmgray}
+                  value={otpCode}
+                  onChangeText={setOtpCode}
+                  style={s.otpInput}
+                  keyboardType="number-pad"
+                  maxLength={6}
+                  textContentType="oneTimeCode"
+                  autoFocus
+                />
+              </View>
 
-          {!isSignUp && (
-            <AnimatedPressable
-              onPress={() => router.push('/(auth)/forgot-password')}
-              style={s.forgotRow}
-            >
-              <Text style={s.forgotText}>Forgot password?</Text>
-            </AnimatedPressable>
+              <AnimatedPressable
+                onPress={handleVerifyOtp}
+                disabled={loading}
+                style={s.primaryBtn}
+              >
+                {loading ? (
+                  <ActivityIndicator size="small" color={COLORS.bg} />
+                ) : (
+                  <Text style={s.primaryBtnText}>Verify & Continue</Text>
+                )}
+              </AnimatedPressable>
+
+              <View style={s.resendRow}>
+                {resendTimer > 0 ? (
+                  <Text style={s.resendTimerText}>
+                    Resend code in {resendTimer}s
+                  </Text>
+                ) : (
+                  <AnimatedPressable
+                    onPress={handleRequestOtp}
+                    disabled={loading}
+                    style={s.resendBtn}
+                  >
+                    <RefreshCw size={14} color={COLORS.charcoal} />
+                    <Text style={s.resendBtnText}>Resend Code</Text>
+                  </AnimatedPressable>
+                )}
+
+                <Text style={s.dotSeparator}>•</Text>
+
+                <AnimatedPressable
+                  onPress={() => {
+                    setStep('request');
+                    setOtpCode('');
+                    setErrorMsg('');
+                    setSuccessMsg('');
+                  }}
+                >
+                  <Text style={s.changeEmailText}>Change Email</Text>
+                </AnimatedPressable>
+              </View>
+            </View>
           )}
-
-          <AnimatedPressable
-            onPress={handleAuthAction}
-            disabled={loading}
-            style={s.primaryBtn}
-          >
-            {loading ? (
-              <ActivityIndicator size="small" color={COLORS.bg} />
-            ) : (
-              <Text style={s.primaryBtnText}>
-                {isSignUp ? 'Create Account' : 'Sign In'}
-              </Text>
-            )}
-          </AnimatedPressable>
-
-          <View style={s.dividerRow}>
-            <View style={s.dividerLine} />
-            <Text style={s.dividerText}>or</Text>
-            <View style={s.dividerLine} />
-          </View>
-
-          <AnimatedPressable
-            onPress={handleGoogleAuth}
-            disabled={loading}
-            style={[s.googleBtn, loading && { opacity: 0.6 }]}
-          >
-            <Globe size={18} color={COLORS.charcoal} />
-            <Text style={s.googleBtnText}>Continue with Google</Text>
-          </AnimatedPressable>
-
-          <View style={s.toggleRow}>
-            <Text style={s.toggleText}>
-              {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
-            </Text>
-            <AnimatedPressable
-              onPress={() => {
-                setIsSignUp(!isSignUp);
-                setErrorMsg('');
-              }}
-            >
-              <Text style={s.toggleLink}>
-                {isSignUp ? 'Sign In' : 'Sign Up'}
-              </Text>
-            </AnimatedPressable>
-          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -327,7 +419,7 @@ const getStyles = (COLORS: any, isDarkMode: boolean) =>
       marginBottom: 32,
     },
     titleSection: {
-      marginBottom: 32,
+      marginBottom: 28,
     },
     welcomeText: {
       fontFamily: 'Outfit_400Regular',
@@ -369,20 +461,22 @@ const getStyles = (COLORS: any, isDarkMode: boolean) =>
       fontSize: 12,
       color: isDarkMode ? '#FCA5A5' : '#DC2626',
     },
+    successBox: {
+      backgroundColor: isDarkMode ? '#143823' : '#F0FDF4',
+      borderWidth: 1,
+      borderColor: isDarkMode ? '#166534' : '#BBF7D0',
+      borderRadius: 12,
+      padding: 12,
+      marginBottom: 16,
+    },
+    successText: {
+      fontFamily: 'Inter_500Medium',
+      fontSize: 12,
+      color: isDarkMode ? '#86EFAC' : '#15803D',
+    },
     form: {
       gap: 12,
       marginBottom: 24,
-    },
-    forgotRow: {
-      alignSelf: 'flex-end' as const,
-      marginTop: -16,
-      marginBottom: 16,
-    },
-    forgotText: {
-      fontFamily: 'Inter_500Medium',
-      fontSize: 13,
-      color: COLORS.warmgray,
-      textDecorationLine: 'underline' as const,
     },
     inputRow: {
       flexDirection: 'row',
@@ -402,6 +496,14 @@ const getStyles = (COLORS: any, isDarkMode: boolean) =>
       color: COLORS.charcoal,
       padding: 0,
     },
+    otpInput: {
+      flex: 1,
+      fontFamily: 'Outfit_600SemiBold',
+      fontSize: 18,
+      letterSpacing: 4,
+      color: COLORS.charcoal,
+      padding: 0,
+    },
     primaryBtn: {
       backgroundColor: COLORS.charcoal,
       borderRadius: 24,
@@ -413,6 +515,7 @@ const getStyles = (COLORS: any, isDarkMode: boolean) =>
       shadowOpacity: 0.1,
       shadowRadius: 4,
       elevation: 3,
+      marginTop: 8,
     },
     primaryBtnText: {
       fontFamily: 'Inter_500Medium',
@@ -422,7 +525,7 @@ const getStyles = (COLORS: any, isDarkMode: boolean) =>
     dividerRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginVertical: 24,
+      marginVertical: 20,
     },
     dividerLine: {
       flex: 1,
@@ -455,7 +558,7 @@ const getStyles = (COLORS: any, isDarkMode: boolean) =>
     toggleRow: {
       flexDirection: 'row',
       justifyContent: 'center',
-      marginTop: 24,
+      marginTop: 20,
     },
     toggleText: {
       fontFamily: 'Inter_400Regular',
@@ -468,4 +571,38 @@ const getStyles = (COLORS: any, isDarkMode: boolean) =>
       color: COLORS.charcoal,
       textDecorationLine: 'underline',
     },
+    resendRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 12,
+      marginTop: 16,
+    },
+    resendBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    resendBtnText: {
+      fontFamily: 'Inter_600SemiBold',
+      fontSize: 13,
+      color: COLORS.charcoal,
+    },
+    resendTimerText: {
+      fontFamily: 'Inter_400Regular',
+      fontSize: 13,
+      color: COLORS.warmgray,
+    },
+    dotSeparator: {
+      fontFamily: 'Inter_400Regular',
+      fontSize: 13,
+      color: COLORS.warmgray,
+    },
+    changeEmailText: {
+      fontFamily: 'Inter_500Medium',
+      fontSize: 13,
+      color: COLORS.warmgray,
+      textDecorationLine: 'underline',
+    },
   });
+
