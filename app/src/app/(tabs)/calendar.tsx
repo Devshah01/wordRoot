@@ -41,6 +41,7 @@ export default function CalendarScreen() {
   const THEME_COLORS = useMemo(() => ({ ...COLORS, gridLine: isDarkMode ? '#2A2A2A' : '#EDEDEB' }), [COLORS, isDarkMode]);
   const s = useMemo(() => getStyles(THEME_COLORS, isDarkMode), [THEME_COLORS, isDarkMode]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorWord, setErrorWord] = useState<string | null>(null);
 
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [currentMonth, setCurrentMonth] = useState<number>(new Date().getMonth());
@@ -153,6 +154,9 @@ export default function CalendarScreen() {
   };
 
   const handleSaveCalendarVocab = async () => {
+    setErrorWord(null);
+    setErrorMessage(null);
+
     // Check for partially filled draft lines (word without meaning or meaning without word)
     const hasIncompleteDraft = calendarDrafts.some(
       (line) => (line.word.trim() && !line.meaning.trim()) || (!line.word.trim() && line.meaning.trim())
@@ -186,19 +190,21 @@ export default function CalendarScreen() {
     }
 
     const allNormalizedEntries = [
-      ...validDrafts.map(e => ({ id: undefined, word: e.word.trim().toLowerCase() })),
-      ...modifiedWords.map(e => ({ id: e.id, word: e.word.trim().toLowerCase() })),
+      ...validDrafts.map(e => ({ id: undefined, word: e.word.trim().toLowerCase(), rawWord: e.word.trim() })),
+      ...modifiedWords.map(e => ({ id: e.id, word: e.word.trim().toLowerCase(), rawWord: e.word.trim() })),
     ];
 
     // Check duplicate words within the current submission
     const seenWordsInBatch = new Set<string>();
     for (const item of allNormalizedEntries) {
       if (item.word.length > 100) {
-        setErrorMessage(`"${item.word}" exceeds the 100 character limit.`);
+        setErrorMessage(`"${item.rawWord}" exceeds the 100 character limit.`);
+        setErrorWord(item.word);
         return;
       }
       if (seenWordsInBatch.has(item.word)) {
-        setErrorMessage(`"${item.word}" is listed more than once in your entries.`);
+        setErrorMessage(`"${item.rawWord}" is listed more than once in your entries.`);
+        setErrorWord(item.word);
         return;
       }
       seenWordsInBatch.add(item.word);
@@ -213,14 +219,15 @@ export default function CalendarScreen() {
     }
 
     // Check against existing words in vocabulary (excluding the word itself if editing)
-    const wordExists = allNormalizedEntries.some(entry =>
+    const duplicateEntry = allNormalizedEntries.find(entry =>
       words.some(w =>
         w.word.toLowerCase() === entry.word && (entry.id ? w.id !== entry.id : true)
       )
     );
 
-    if (wordExists) {
-      setErrorMessage('This word is already in your vocabulary.');
+    if (duplicateEntry) {
+      setErrorMessage(`"${duplicateEntry.rawWord}" is already in your vocabulary.`);
+      setErrorWord(duplicateEntry.word);
       return;
     }
 
@@ -318,6 +325,7 @@ export default function CalendarScreen() {
       setCalendarEditedWords([]);
       resetDraftVocabLines();
       setErrorMessage(null);
+      setErrorWord(null);
       setIsEditorOpen(false);
       await loadLocalDatabase();
     } catch (err: any) {
@@ -328,6 +336,7 @@ export default function CalendarScreen() {
   const handleDeleteWord = async (word: any) => {
     try {
       setErrorMessage(null);
+      setErrorWord(null);
       await deleteWord(word.id);
       await queueCloudChange(word.id, 'delete', { word: word.word });
       setCalendarEditedWords(prev => prev.filter(w => w.id !== word.id));
@@ -609,7 +618,13 @@ export default function CalendarScreen() {
                 {calendarEditedWords.map((word, index) => {
                   const wordErr = word.word.length > 100;
                   const meaningErr = word.meaning.length > 500;
-                  const hasErr = wordErr || meaningErr;
+                  const normWord = word.word.trim().toLowerCase();
+                  const isDuplicateErr = Boolean(errorWord && normWord && normWord === errorWord.toLowerCase());
+                  const isIncompleteErr = Boolean(
+                    errorMessage === 'Word and meaning fields cannot be empty.' &&
+                    (!word.word.trim() || !word.meaning.trim())
+                  );
+                  const hasErr = wordErr || meaningErr || isDuplicateErr || isIncompleteErr;
                   return (
                     <View key={`saved-${index}`} style={{ marginBottom: 14 }}>
                       <View style={s.wordRow}>
@@ -622,6 +637,7 @@ export default function CalendarScreen() {
                               style={s.wordInputSaved}
                               value={word.word}
                               onChangeText={(val) => {
+                                if (errorMessage || errorWord) { setErrorMessage(null); setErrorWord(null); }
                                 setCalendarEditedWords(prev =>
                                   prev.map((item, i) =>
                                     i === index ? { ...item, word: val } : item
@@ -641,6 +657,7 @@ export default function CalendarScreen() {
                             style={s.meaningInputSaved}
                             value={word.meaning}
                             onChangeText={(val) => {
+                              if (errorMessage || errorWord) { setErrorMessage(null); setErrorWord(null); }
                               setCalendarEditedWords(prev =>
                                 prev.map((item, i) =>
                                   i === index ? { ...item, meaning: val } : item
@@ -658,7 +675,8 @@ export default function CalendarScreen() {
                           <Text style={s.inlineErrorText}>
                             {wordErr ? `Word: ${word.word.length}/100 chars ` : ''}
                             {meaningErr ? `Meaning: ${word.meaning.length}/500 chars ` : ''}
-                            (Max: Word 100, Meaning 500)
+                            {isDuplicateErr ? `"${word.word.trim()}" is already in your vocabulary ` : ''}
+                            {isIncompleteErr ? `Word and meaning required ` : ''}
                           </Text>
                         </View>
                       )}
@@ -669,7 +687,13 @@ export default function CalendarScreen() {
                 {calendarDrafts.map((line, index) => {
                   const wordErr = line.word.length > 100;
                   const meaningErr = line.meaning.length > 500;
-                  const hasErr = wordErr || meaningErr;
+                  const normWord = line.word.trim().toLowerCase();
+                  const isDuplicateErr = Boolean(errorWord && normWord && normWord === errorWord.toLowerCase());
+                  const isIncompleteErr = Boolean(
+                    errorMessage === 'Word and meaning fields cannot be empty.' &&
+                    ((line.word.trim() && !line.meaning.trim()) || (!line.word.trim() && line.meaning.trim()))
+                  );
+                  const hasErr = wordErr || meaningErr || isDuplicateErr || isIncompleteErr;
                   return (
                     <View key={`draft-${index}`} style={{ marginBottom: 14 }}>
                       <View style={s.wordRow}>
@@ -681,6 +705,7 @@ export default function CalendarScreen() {
                               placeholderTextColor={COLORS.warmgray}
                               value={line.word}
                               onChangeText={(val) => {
+                                if (errorMessage || errorWord) { setErrorMessage(null); setErrorWord(null); }
                                 const newArr = [...calendarDrafts];
                                 newArr[index].word = val;
                                 setCalendarDrafts(newArr);
@@ -689,6 +714,7 @@ export default function CalendarScreen() {
                               autoCapitalize="none"
                             />
                             <AnimatedPressable style={s.wordRowIcon} onPress={() => {
+                              if (errorMessage || errorWord) { setErrorMessage(null); setErrorWord(null); }
                               const updated = [...calendarDrafts];
                               updated.splice(index, 1);
                               setCalendarDrafts(updated.length > 0 ? updated : [{ word: '', meaning: '' }]);
@@ -702,6 +728,7 @@ export default function CalendarScreen() {
                             placeholderTextColor={COLORS.warmgray}
                             value={line.meaning}
                             onChangeText={(val) => {
+                              if (errorMessage || errorWord) { setErrorMessage(null); setErrorWord(null); }
                               const newArr = [...calendarDrafts];
                               newArr[index].meaning = val;
                               setCalendarDrafts(newArr);
@@ -718,7 +745,8 @@ export default function CalendarScreen() {
                           <Text style={s.inlineErrorText}>
                             {wordErr ? `Word: ${line.word.length}/100 chars ` : ''}
                             {meaningErr ? `Meaning: ${line.meaning.length}/500 chars ` : ''}
-                            (Max: Word 100, Meaning 500)
+                            {isDuplicateErr ? `"${line.word.trim()}" is already in your vocabulary ` : ''}
+                            {isIncompleteErr ? `Word and meaning required ` : ''}
                           </Text>
                         </View>
                       )}
@@ -726,7 +754,10 @@ export default function CalendarScreen() {
                   );
                 })}
 
-                <AnimatedPressable onPress={() => setCalendarDrafts([...calendarDrafts, { word: '', meaning: '' }])} style={s.addLineBtn}>
+                <AnimatedPressable onPress={() => {
+                  if (errorMessage || errorWord) { setErrorMessage(null); setErrorWord(null); }
+                  setCalendarDrafts([...calendarDrafts, { word: '', meaning: '' }]);
+                }} style={s.addLineBtn}>
                   <Plus size={24} color={COLORS.white} />
                 </AnimatedPressable>
                 <View style={{ height: 100 }} />
