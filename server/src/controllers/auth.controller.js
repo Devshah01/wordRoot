@@ -407,6 +407,8 @@ async function deleteAccount(req, res) {
     console.error('Delete account error:', error);
     res.status(500).json({ error: 'Failed to delete account. Please try again.' });
   }
+}
+
 // 6. Send OTP
 async function sendOtp(req, res) {
   try {
