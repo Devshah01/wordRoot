@@ -337,11 +337,11 @@ export default function AuthScreen() {
               <View style={s.inputRow}>
                 <KeyRound size={18} color={COLORS.warmgray} />
                 <TextInput
-                  placeholder="6-Digit Verification Code"
+                  placeholder="Enter 6-digit code"
                   placeholderTextColor={COLORS.warmgray}
                   value={otpCode}
                   onChangeText={setOtpCode}
-                  style={s.otpInput}
+                  style={[s.otpInput, !otpCode && s.otpInputPlaceholder]}
                   keyboardType="number-pad"
                   maxLength={6}
                   textContentType="oneTimeCode"
@@ -503,6 +503,11 @@ const getStyles = (COLORS: any, isDarkMode: boolean) =>
       letterSpacing: 4,
       color: COLORS.charcoal,
       padding: 0,
+    },
+    otpInputPlaceholder: {
+      fontFamily: 'Inter_400Regular',
+      fontSize: 14,
+      letterSpacing: 0,
     },
     primaryBtn: {
       backgroundColor: COLORS.charcoal,
