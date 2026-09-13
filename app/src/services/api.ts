@@ -109,6 +109,12 @@ export const api = {
     },
   },
 
+  warmup: () => {
+    fetch(`${BASE_URL}/health`).catch(() => {
+      // Silent background ping to wake up Cloud Run & DB on app startup
+    });
+  },
+
   sync: {
     push: (syncQueue: unknown[]) =>
       request('/api/sync', { method: 'POST', body: JSON.stringify({ syncQueue }) }),

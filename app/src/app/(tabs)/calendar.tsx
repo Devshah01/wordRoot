@@ -172,13 +172,13 @@ export default function CalendarScreen() {
     }
 
     const validDrafts = calendarDrafts.filter((line) => line.word.trim() && line.meaning.trim());
-    
+
     // Find modified saved words
     const originalSelectedWords = allWords.filter((w) => {
       const dStr = formatLocalDateString(w.dateAdded || new Date());
       return dStr === selectedDateStr && !w.isDraft;
     });
-      
+
     const modifiedWords = calendarEditedWords.filter((editedWord, i) => {
       const original = originalSelectedWords.find(w => w.id === editedWord.id);
       return original && (original.word !== editedWord.word.trim().toLowerCase() || original.meaning !== editedWord.meaning.trim());
@@ -212,7 +212,7 @@ export default function CalendarScreen() {
 
     // Check meaning length limit
     const meaningTooLong = validDrafts.some(e => e.meaning.trim().length > 500) ||
-                           modifiedWords.some(w => w.meaning.trim().length > 500);
+      modifiedWords.some(w => w.meaning.trim().length > 500);
     if (meaningTooLong) {
       setErrorMessage('Meaning must be 500 characters or less.');
       return;
@@ -351,7 +351,7 @@ export default function CalendarScreen() {
     setSelectedDate(next);
     setCurrentMonth(next.getMonth());
     setCurrentYear(next.getFullYear());
-    
+
     const dStr = formatLocalDateString(next);
     const originalSelectedWords = allWords.filter((w) => {
       return formatLocalDateString(w.dateAdded || new Date()) === dStr && !w.isDraft;
@@ -367,7 +367,7 @@ export default function CalendarScreen() {
     setSelectedDate(prevDate);
     setCurrentMonth(prevDate.getMonth());
     setCurrentYear(prevDate.getFullYear());
-    
+
     const dStr = formatLocalDateString(prevDate);
     const originalSelectedWords = allWords.filter((w) => {
       return formatLocalDateString(w.dateAdded || new Date()) === dStr && !w.isDraft;
@@ -470,123 +470,123 @@ export default function CalendarScreen() {
       <GestureDetector gesture={monthPanGesture}>
         <View style={s.content}>
           {/* Month Navigation */}
-          
-            <View>
-              <View style={s.monthNav}>
-                <AnimatedPressable onPress={() => setIsYearPickerOpen(true)}>
-                  <Text style={s.monthTitle}>
-                    {MONTHS[currentMonth]} {currentYear}
-                  </Text>
+
+          <View>
+            <View style={s.monthNav}>
+              <AnimatedPressable onPress={() => setIsYearPickerOpen(true)}>
+                <Text style={s.monthTitle}>
+                  {MONTHS[currentMonth]} {currentYear}
+                </Text>
+              </AnimatedPressable>
+              <View style={s.monthArrows}>
+                <AnimatedPressable onPress={() => setIsSearchActive(true)} style={s.iconBtn}>
+                  <Search size={24} color={COLORS.charcoal} strokeWidth={2.5} />
                 </AnimatedPressable>
-                <View style={s.monthArrows}>
-                  <AnimatedPressable onPress={() => setIsSearchActive(true)} style={s.iconBtn}>
-                    <Search size={24} color={COLORS.charcoal} strokeWidth={2.5} />
-                  </AnimatedPressable>
-                  <AnimatedPressable onPress={prevMonth} style={s.iconBtn}>
-                    <ChevronLeft size={24} color={COLORS.charcoal} strokeWidth={2.5} />
-                  </AnimatedPressable>
-                  <AnimatedPressable onPress={nextMonth} style={s.iconBtn}>
-                    <ChevronRight size={24} color={COLORS.charcoal} strokeWidth={2.5} />
-                  </AnimatedPressable>
-                </View>
+                <AnimatedPressable onPress={prevMonth} style={s.iconBtn}>
+                  <ChevronLeft size={24} color={COLORS.charcoal} strokeWidth={2.5} />
+                </AnimatedPressable>
+                <AnimatedPressable onPress={nextMonth} style={s.iconBtn}>
+                  <ChevronRight size={24} color={COLORS.charcoal} strokeWidth={2.5} />
+                </AnimatedPressable>
               </View>
             </View>
-          
+          </View>
+
 
           {/* Weekday Headers */}
-          
-            <View>
-              <View style={s.weekRow}>
-                {WEEKDAYS.map((day, idx) => (
-                  <Text key={idx} style={s.weekLabel}>{day}</Text>
-                ))}
-              </View>
+
+          <View>
+            <View style={s.weekRow}>
+              {WEEKDAYS.map((day, idx) => (
+                <Text key={idx} style={s.weekLabel}>{day}</Text>
+              ))}
             </View>
-          
+          </View>
+
 
           {/* Calendar Grid with borders */}
-          
-            <View>
-              <View style={s.gridContainer}>
-                {renderCalendarGrid()}
-              </View>
+
+          <View>
+            <View style={s.gridContainer}>
+              {renderCalendarGrid()}
             </View>
-          
+          </View>
+
 
           {/* Selected Day Details */}
-          
-            <View>
-              <View style={s.selectedHeader}>
-                <View>
-                  <Text style={s.selectedTitle}>
-                    {selectedDay} {selectedMonthName} {selectedYear}
-                  </Text>
-                  <Text style={s.selectedSub}>
-                    {selectedDateWords.length} Words Added
-                  </Text>
-                </View>
-                <AnimatedPressable onPress={() => openEditor()} style={s.iconBtn}>
-                  <Edit2 size={24} color={COLORS.charcoal} strokeWidth={2.5} />
-                </AnimatedPressable>
+
+          <View>
+            <View style={s.selectedHeader}>
+              <View>
+                <Text style={s.selectedTitle}>
+                  {selectedDay} {selectedMonthName} {selectedYear}
+                </Text>
+                <Text style={s.selectedSub}>
+                  {selectedDateWords.length} Words Added
+                </Text>
               </View>
+              <AnimatedPressable onPress={() => openEditor()} style={s.iconBtn}>
+                <Edit2 size={24} color={COLORS.charcoal} strokeWidth={2.5} />
+              </AnimatedPressable>
             </View>
-          
+          </View>
+
 
           {/* Word List Box - Perfectly sized above bottom navigation bar with scrollable items inside */}
-          
-            <View style={{ flex: 1 }}>
-              <View style={[s.vocabCard, { marginBottom: insets.bottom + 92 }]}>
-                {selectedDateWords.length === 0 ? (
-                  <View style={s.emptyVocabContent}>
-                    <BookOpen size={40} color={COLORS.bone} strokeWidth={1.5} style={{ marginBottom: 12 }} />
-                    <Text style={s.emptyText}>No words logged for this day.</Text>
-                  </View>
-                ) : (
-                  <ScrollView
-                    showsVerticalScrollIndicator={false}
-                    style={{ flex: 1 }}
-                    contentContainerStyle={{ paddingVertical: 4 }}
-                  >
-                    {selectedDateWords.map((item, index) => (
-                      <View key={index} style={[s.wordCard, index === selectedDateWords.length - 1 && { borderBottomWidth: 0 }]}>
-                        <Text style={s.wordRowNum}>{index + 1}.</Text>
-                        <View style={{ flex: 1, marginRight: 4 }}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, flexWrap: 'wrap', gap: 6 }}>
-                              <Text style={s.wordTitle}>{item.word}</Text>
-                              {item.isDraft && (
-                                <View style={{ backgroundColor: COLORS.lightgray, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 }}>
-                                  <Text style={{ fontFamily: 'Inter_500Medium', fontSize: 10, color: COLORS.warmgray }}>Draft</Text>
-                                </View>
-                              )}
-                            </View>
-                            {!item.isDraft && (
-                              <AnimatedPressable onPress={() => handleDeleteWord(item)} style={s.iconBtnSm}>
-                                <Trash2 size={18} color="#EF4444" strokeWidth={2} />
-                              </AnimatedPressable>
+
+          <View style={{ flex: 1 }}>
+            <View style={[s.vocabCard, { marginBottom: insets.bottom + 92 }]}>
+              {selectedDateWords.length === 0 ? (
+                <View style={s.emptyVocabContent}>
+                  <BookOpen size={40} color={COLORS.bone} strokeWidth={1.5} style={{ marginBottom: 12 }} />
+                  <Text style={s.emptyText}>No words logged for this day.</Text>
+                </View>
+              ) : (
+                <ScrollView
+                  showsVerticalScrollIndicator={false}
+                  style={{ flex: 1 }}
+                  contentContainerStyle={{ paddingVertical: 4 }}
+                >
+                  {selectedDateWords.map((item, index) => (
+                    <View key={index} style={[s.wordCard, index === selectedDateWords.length - 1 && { borderBottomWidth: 0 }]}>
+                      <Text style={s.wordRowNum}>{index + 1}.</Text>
+                      <View style={{ flex: 1, marginRight: 4 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, flexWrap: 'wrap', gap: 6 }}>
+                            <Text style={s.wordTitle}>{item.word}</Text>
+                            {item.isDraft && (
+                              <View style={{ backgroundColor: COLORS.lightgray, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 }}>
+                                <Text style={{ fontFamily: 'Inter_500Medium', fontSize: 10, color: COLORS.warmgray }}>Draft</Text>
+                              </View>
                             )}
                           </View>
-                          {item.meaning.trim() ? (
-                            <Text style={s.wordMeaning}>{item.meaning}</Text>
-                          ) : null}
+                          {!item.isDraft && (
+                            <AnimatedPressable onPress={() => handleDeleteWord(item)} style={s.iconBtnSm}>
+                              <Trash2 size={18} color="#EF4444" strokeWidth={2} />
+                            </AnimatedPressable>
+                          )}
                         </View>
+                        {item.meaning.trim() ? (
+                          <Text style={s.wordMeaning}>{item.meaning}</Text>
+                        ) : null}
                       </View>
-                    ))}
-                  </ScrollView>
-                )}
-              </View>
+                    </View>
+                  ))}
+                </ScrollView>
+              )}
             </View>
-          
+          </View>
+
 
           {/* ========== EXPANDED VOCAB MODAL ========== */}
-        <Modal visible={isEditorOpen} animationType="fade" transparent={false}>
-          <SafeAreaView style={[s.container, { paddingHorizontal: 12 }]}>
-            <KeyboardAvoidingView
-              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-              style={{ flex: 1 }}
-            >
-              <GestureDetector gesture={dayPanGesture}>
-                <View style={{ flex: 1 }}>
+          <Modal visible={isEditorOpen} animationType="fade" transparent={false}>
+            <SafeAreaView style={[s.container, { paddingHorizontal: 12 }]}>
+              <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={{ flex: 1 }}
+              >
+                <GestureDetector gesture={dayPanGesture}>
+                  <View style={{ flex: 1 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 24, marginTop: 12 }}>
                       <AnimatedPressable onPress={() => setIsEditorOpen(false)} style={{ marginRight: 16 }}>
                         <ArrowLeft size={28} color={COLORS.charcoal} />
@@ -602,171 +602,171 @@ export default function CalendarScreen() {
                       </AnimatedPressable>
                     </View>
 
-                <ScrollView
-                  style={{ flex: 1 }}
-                  contentContainerStyle={{ paddingBottom: 160 }}
-                  showsVerticalScrollIndicator={false}
-                  keyboardShouldPersistTaps="handled"
-                  automaticallyAdjustKeyboardInsets={true}
-                >
-                {errorMessage ? (
-                  <View style={s.errorBox}>
-                    <AlertCircle size={16} color={isDarkMode ? '#FCA5A5' : '#DC2626'} style={{ marginRight: 8 }} />
-                    <Text style={s.errorText}>{errorMessage}</Text>
+                    <ScrollView
+                      style={{ flex: 1 }}
+                      contentContainerStyle={{ paddingBottom: 160 }}
+                      showsVerticalScrollIndicator={false}
+                      keyboardShouldPersistTaps="handled"
+                      automaticallyAdjustKeyboardInsets={true}
+                    >
+                      {errorMessage ? (
+                        <View style={s.errorBox}>
+                          <AlertCircle size={16} color={isDarkMode ? '#FCA5A5' : '#DC2626'} style={{ marginRight: 8 }} />
+                          <Text style={s.errorText}>{errorMessage}</Text>
+                        </View>
+                      ) : null}
+                      {calendarEditedWords.map((word, index) => {
+                        const wordErr = word.word.length > 100;
+                        const meaningErr = word.meaning.length > 500;
+                        const normWord = word.word.trim().toLowerCase();
+                        const isDuplicateErr = Boolean(errorWord && normWord && normWord === errorWord.toLowerCase());
+                        const isIncompleteErr = Boolean(
+                          errorMessage === 'Word and meaning fields cannot be empty.' &&
+                          (!word.word.trim() || !word.meaning.trim())
+                        );
+                        const hasErr = wordErr || meaningErr || isDuplicateErr || isIncompleteErr;
+                        return (
+                          <View key={`saved-${index}`} style={{ marginBottom: 14 }}>
+                            <View style={s.wordRow}>
+                              <Text style={s.wordRowNumExpanded}>{index + 1}.</Text>
+                              <View style={[s.wordCardBox, hasErr && s.wordRowContentError]}>
+                                <View style={s.wordCardHeader}>
+                                  <TextInput
+                                    placeholder="Word"
+                                    placeholderTextColor={COLORS.warmgray}
+                                    style={s.wordInputSaved}
+                                    value={word.word}
+                                    onChangeText={(val) => {
+                                      if (errorMessage || errorWord) { setErrorMessage(null); setErrorWord(null); }
+                                      setCalendarEditedWords(prev =>
+                                        prev.map((item, i) =>
+                                          i === index ? { ...item, word: val } : item
+                                        )
+                                      );
+                                    }}
+                                    autoCapitalize="none"
+                                  />
+                                  <AnimatedPressable style={s.wordRowIcon} onPress={() => handleDeleteWord(word)}>
+                                    <Trash2 size={18} color="#E74C3C" />
+                                  </AnimatedPressable>
+                                </View>
+                                <View style={s.wordCardDivider} />
+                                <TextInput
+                                  placeholder="Meaning"
+                                  placeholderTextColor={COLORS.warmgray}
+                                  style={s.meaningInputSaved}
+                                  value={word.meaning}
+                                  onChangeText={(val) => {
+                                    if (errorMessage || errorWord) { setErrorMessage(null); setErrorWord(null); }
+                                    setCalendarEditedWords(prev =>
+                                      prev.map((item, i) =>
+                                        i === index ? { ...item, meaning: val } : item
+                                      )
+                                    );
+                                  }}
+                                  multiline={true}
+                                  textAlignVertical="top"
+                                />
+                              </View>
+                            </View>
+                            {hasErr && (
+                              <View style={s.inlineErrorRow}>
+                                <AlertCircle size={12} color="#EF4444" style={{ marginRight: 4 }} />
+                                <Text style={s.inlineErrorText}>
+                                  {wordErr ? `Word: ${word.word.length}/100 chars ` : ''}
+                                  {meaningErr ? `Meaning: ${word.meaning.length}/500 chars ` : ''}
+                                  {isDuplicateErr ? `"${word.word.trim()}" is already in your vocabulary ` : ''}
+                                  {isIncompleteErr ? `Word and meaning required ` : ''}
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+                        );
+                      })}
+
+                      {calendarDrafts.map((line, index) => {
+                        const wordErr = line.word.length > 100;
+                        const meaningErr = line.meaning.length > 500;
+                        const normWord = line.word.trim().toLowerCase();
+                        const isDuplicateErr = Boolean(errorWord && normWord && normWord === errorWord.toLowerCase());
+                        const isIncompleteErr = Boolean(
+                          errorMessage === 'Word and meaning fields cannot be empty.' &&
+                          ((line.word.trim() && !line.meaning.trim()) || (!line.word.trim() && line.meaning.trim()))
+                        );
+                        const hasErr = wordErr || meaningErr || isDuplicateErr || isIncompleteErr;
+                        return (
+                          <View key={`draft-${index}`} style={{ marginBottom: 14 }}>
+                            <View style={s.wordRow}>
+                              <Text style={s.wordRowNumExpanded}>{calendarEditedWords.length + index + 1}.</Text>
+                              <View style={[s.wordCardBox, hasErr && s.wordRowContentError]}>
+                                <View style={s.wordCardHeader}>
+                                  <TextInput
+                                    placeholder="Word"
+                                    placeholderTextColor={COLORS.warmgray}
+                                    value={line.word}
+                                    onChangeText={(val) => {
+                                      if (errorMessage || errorWord) { setErrorMessage(null); setErrorWord(null); }
+                                      const newArr = [...calendarDrafts];
+                                      newArr[index].word = val;
+                                      setCalendarDrafts(newArr);
+                                    }}
+                                    style={s.wordInput}
+                                    autoCapitalize="none"
+                                  />
+                                  <AnimatedPressable style={s.wordRowIcon} onPress={() => {
+                                    if (errorMessage || errorWord) { setErrorMessage(null); setErrorWord(null); }
+                                    const updated = [...calendarDrafts];
+                                    updated.splice(index, 1);
+                                    setCalendarDrafts(updated.length > 0 ? updated : [{ word: '', meaning: '' }]);
+                                  }}>
+                                    <Trash2 size={18} color="#E74C3C" />
+                                  </AnimatedPressable>
+                                </View>
+                                <View style={s.wordCardDivider} />
+                                <TextInput
+                                  placeholder="Meaning"
+                                  placeholderTextColor={COLORS.warmgray}
+                                  value={line.meaning}
+                                  onChangeText={(val) => {
+                                    if (errorMessage || errorWord) { setErrorMessage(null); setErrorWord(null); }
+                                    const newArr = [...calendarDrafts];
+                                    newArr[index].meaning = val;
+                                    setCalendarDrafts(newArr);
+                                  }}
+                                  style={s.meaningInput}
+                                  multiline={true}
+                                  textAlignVertical="top"
+                                />
+                              </View>
+                            </View>
+                            {hasErr && (
+                              <View style={s.inlineErrorRow}>
+                                <AlertCircle size={12} color="#EF4444" style={{ marginRight: 4 }} />
+                                <Text style={s.inlineErrorText}>
+                                  {wordErr ? `Word: ${line.word.length}/100 chars ` : ''}
+                                  {meaningErr ? `Meaning: ${line.meaning.length}/500 chars ` : ''}
+                                  {isDuplicateErr ? `"${line.word.trim()}" is already in your vocabulary ` : ''}
+                                  {isIncompleteErr ? `Word and meaning required ` : ''}
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+                        );
+                      })}
+
+                      <AnimatedPressable onPress={() => {
+                        if (errorMessage || errorWord) { setErrorMessage(null); setErrorWord(null); }
+                        setCalendarDrafts([...calendarDrafts, { word: '', meaning: '' }]);
+                      }} style={s.addLineBtn}>
+                        <Plus size={24} color={COLORS.white} />
+                      </AnimatedPressable>
+                      <View style={{ height: 100 }} />
+                    </ScrollView>
                   </View>
-                ) : null}
-                {calendarEditedWords.map((word, index) => {
-                  const wordErr = word.word.length > 100;
-                  const meaningErr = word.meaning.length > 500;
-                  const normWord = word.word.trim().toLowerCase();
-                  const isDuplicateErr = Boolean(errorWord && normWord && normWord === errorWord.toLowerCase());
-                  const isIncompleteErr = Boolean(
-                    errorMessage === 'Word and meaning fields cannot be empty.' &&
-                    (!word.word.trim() || !word.meaning.trim())
-                  );
-                  const hasErr = wordErr || meaningErr || isDuplicateErr || isIncompleteErr;
-                  return (
-                    <View key={`saved-${index}`} style={{ marginBottom: 14 }}>
-                      <View style={s.wordRow}>
-                        <Text style={s.wordRowNumExpanded}>{index + 1}.</Text>
-                        <View style={[s.wordCardBox, hasErr && s.wordRowContentError]}>
-                          <View style={s.wordCardHeader}>
-                            <TextInput
-                              placeholder="Word"
-                              placeholderTextColor={COLORS.warmgray}
-                              style={s.wordInputSaved}
-                              value={word.word}
-                              onChangeText={(val) => {
-                                if (errorMessage || errorWord) { setErrorMessage(null); setErrorWord(null); }
-                                setCalendarEditedWords(prev =>
-                                  prev.map((item, i) =>
-                                    i === index ? { ...item, word: val } : item
-                                  )
-                                );
-                              }}
-                              autoCapitalize="none"
-                            />
-                            <AnimatedPressable style={s.wordRowIcon} onPress={() => handleDeleteWord(word)}>
-                              <Trash2 size={18} color="#E74C3C" />
-                            </AnimatedPressable>
-                          </View>
-                          <View style={s.wordCardDivider} />
-                          <TextInput
-                            placeholder="Meaning"
-                            placeholderTextColor={COLORS.warmgray}
-                            style={s.meaningInputSaved}
-                            value={word.meaning}
-                            onChangeText={(val) => {
-                              if (errorMessage || errorWord) { setErrorMessage(null); setErrorWord(null); }
-                              setCalendarEditedWords(prev =>
-                                prev.map((item, i) =>
-                                  i === index ? { ...item, meaning: val } : item
-                                )
-                              );
-                            }}
-                            multiline={true}
-                            textAlignVertical="top"
-                          />
-                        </View>
-                      </View>
-                      {hasErr && (
-                        <View style={s.inlineErrorRow}>
-                          <AlertCircle size={12} color="#EF4444" style={{ marginRight: 4 }} />
-                          <Text style={s.inlineErrorText}>
-                            {wordErr ? `Word: ${word.word.length}/100 chars ` : ''}
-                            {meaningErr ? `Meaning: ${word.meaning.length}/500 chars ` : ''}
-                            {isDuplicateErr ? `"${word.word.trim()}" is already in your vocabulary ` : ''}
-                            {isIncompleteErr ? `Word and meaning required ` : ''}
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-                  );
-                })}
-
-                {calendarDrafts.map((line, index) => {
-                  const wordErr = line.word.length > 100;
-                  const meaningErr = line.meaning.length > 500;
-                  const normWord = line.word.trim().toLowerCase();
-                  const isDuplicateErr = Boolean(errorWord && normWord && normWord === errorWord.toLowerCase());
-                  const isIncompleteErr = Boolean(
-                    errorMessage === 'Word and meaning fields cannot be empty.' &&
-                    ((line.word.trim() && !line.meaning.trim()) || (!line.word.trim() && line.meaning.trim()))
-                  );
-                  const hasErr = wordErr || meaningErr || isDuplicateErr || isIncompleteErr;
-                  return (
-                    <View key={`draft-${index}`} style={{ marginBottom: 14 }}>
-                      <View style={s.wordRow}>
-                        <Text style={s.wordRowNumExpanded}>{calendarEditedWords.length + index + 1}.</Text>
-                        <View style={[s.wordCardBox, hasErr && s.wordRowContentError]}>
-                          <View style={s.wordCardHeader}>
-                            <TextInput
-                              placeholder="Word"
-                              placeholderTextColor={COLORS.warmgray}
-                              value={line.word}
-                              onChangeText={(val) => {
-                                if (errorMessage || errorWord) { setErrorMessage(null); setErrorWord(null); }
-                                const newArr = [...calendarDrafts];
-                                newArr[index].word = val;
-                                setCalendarDrafts(newArr);
-                              }}
-                              style={s.wordInput}
-                              autoCapitalize="none"
-                            />
-                            <AnimatedPressable style={s.wordRowIcon} onPress={() => {
-                              if (errorMessage || errorWord) { setErrorMessage(null); setErrorWord(null); }
-                              const updated = [...calendarDrafts];
-                              updated.splice(index, 1);
-                              setCalendarDrafts(updated.length > 0 ? updated : [{ word: '', meaning: '' }]);
-                            }}>
-                              <Trash2 size={18} color="#E74C3C" />
-                            </AnimatedPressable>
-                          </View>
-                          <View style={s.wordCardDivider} />
-                          <TextInput
-                            placeholder="Meaning"
-                            placeholderTextColor={COLORS.warmgray}
-                            value={line.meaning}
-                            onChangeText={(val) => {
-                              if (errorMessage || errorWord) { setErrorMessage(null); setErrorWord(null); }
-                              const newArr = [...calendarDrafts];
-                              newArr[index].meaning = val;
-                              setCalendarDrafts(newArr);
-                            }}
-                            style={s.meaningInput}
-                            multiline={true}
-                            textAlignVertical="top"
-                          />
-                        </View>
-                      </View>
-                      {hasErr && (
-                        <View style={s.inlineErrorRow}>
-                          <AlertCircle size={12} color="#EF4444" style={{ marginRight: 4 }} />
-                          <Text style={s.inlineErrorText}>
-                            {wordErr ? `Word: ${line.word.length}/100 chars ` : ''}
-                            {meaningErr ? `Meaning: ${line.meaning.length}/500 chars ` : ''}
-                            {isDuplicateErr ? `"${line.word.trim()}" is already in your vocabulary ` : ''}
-                            {isIncompleteErr ? `Word and meaning required ` : ''}
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-                  );
-                })}
-
-                <AnimatedPressable onPress={() => {
-                  if (errorMessage || errorWord) { setErrorMessage(null); setErrorWord(null); }
-                  setCalendarDrafts([...calendarDrafts, { word: '', meaning: '' }]);
-                }} style={s.addLineBtn}>
-                  <Plus size={24} color={COLORS.white} />
-                </AnimatedPressable>
-                <View style={{ height: 100 }} />
-              </ScrollView>
-              </View>
-              </GestureDetector>
-            </KeyboardAvoidingView>
-          </SafeAreaView>
-        </Modal>
+                </GestureDetector>
+              </KeyboardAvoidingView>
+            </SafeAreaView>
+          </Modal>
 
           {/* ========== YEAR PICKER MODAL ========== */}
           <Modal visible={isYearPickerOpen} animationType="fade" transparent>
@@ -823,37 +823,37 @@ export default function CalendarScreen() {
                   <View style={s.emptyState}><Text style={s.emptyText}>No matching words found in library.</Text></View>
                 ) : (
                   searchResults.map((item, index) => (
-                      <AnimatedPressable
-                        key={`search-${index}`}
-                        onPress={() => {
-                          const d = parseDateSafe(item.dateAdded || (item as any).createdAt || new Date());
-                          setSelectedDate(d);
-                          setCurrentMonth(d.getMonth());
-                          setCurrentYear(d.getFullYear());
-                          setIsSearchActive(false);
-                          setSearchQuery('');
-                        }}
-                        style={s.searchResultRow}
-                        activeOpacity={0.7}
-                      >
-                        <View style={s.searchRowTop}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 12 }}>
-                            <Text style={s.searchWord} numberOfLines={1}>{item.word}</Text>
-                            {item.isDraft && (
-                              <View style={{ backgroundColor: COLORS.lightgray, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2, marginLeft: 8 }}>
-                                <Text style={{ fontFamily: 'Inter_500Medium', fontSize: 10, color: COLORS.warmgray }}>Draft</Text>
-                              </View>
-                            )}
-                          </View>
-                          {item.dateAdded && (
-                            <Text style={s.searchDate}>
-                              {formatLocalDateString(item.dateAdded)}
-                            </Text>
+                    <AnimatedPressable
+                      key={`search-${index}`}
+                      onPress={() => {
+                        const d = parseDateSafe(item.dateAdded || (item as any).createdAt || new Date());
+                        setSelectedDate(d);
+                        setCurrentMonth(d.getMonth());
+                        setCurrentYear(d.getFullYear());
+                        setIsSearchActive(false);
+                        setSearchQuery('');
+                      }}
+                      style={s.searchResultRow}
+                      activeOpacity={0.7}
+                    >
+                      <View style={s.searchRowTop}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 12 }}>
+                          <Text style={s.searchWord} numberOfLines={1}>{item.word}</Text>
+                          {item.isDraft && (
+                            <View style={{ backgroundColor: COLORS.lightgray, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2, marginLeft: 8 }}>
+                              <Text style={{ fontFamily: 'Inter_500Medium', fontSize: 10, color: COLORS.warmgray }}>Draft</Text>
+                            </View>
                           )}
                         </View>
-                        <Text style={s.searchMeaning}>{item.meaning}</Text>
-                      </AnimatedPressable>
-                    
+                        {item.dateAdded && (
+                          <Text style={s.searchDate}>
+                            {formatLocalDateString(item.dateAdded)}
+                          </Text>
+                        )}
+                      </View>
+                      <Text style={s.searchMeaning}>{item.meaning}</Text>
+                    </AnimatedPressable>
+
                   ))
                 )}
               </ScrollView>
@@ -996,7 +996,7 @@ const getStyles = (COLORS: any, isDarkMode: boolean) => StyleSheet.create({
   },
   dialogSaveBtn: { backgroundColor: COLORS.charcoal, paddingVertical: 14, borderRadius: 24, alignItems: 'center', marginTop: 24 },
   dialogSaveBtnText: { fontFamily: 'Inter_500Medium', fontSize: 14, color: COLORS.bg },
-  
+
   // Search
   searchHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: COLORS.bone, gap: 12 },
   searchInput: { flex: 1, fontFamily: 'Inter_400Regular', fontSize: 14, color: COLORS.charcoal, backgroundColor: COLORS.card, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, borderWidth: 1, borderColor: COLORS.bone },

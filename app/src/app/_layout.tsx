@@ -21,6 +21,7 @@ import { useAppStore } from '../store/useAppStore';
 import AnimatedSplashScreen from '../components/AnimatedSplashScreen';
 import { useLocalNotifications, requestNotificationPermissions } from '../hooks/useLocalNotifications';
 import { initSyncListener } from '../services/sync';
+import { api } from '../services/api';
 
 LogBox.ignoreLogs([
   'SafeAreaView has been deprecated',
@@ -47,6 +48,11 @@ export default function RootLayout() {
   const isDarkMode = useAppStore(state => state.isDarkMode);
   const hasCompletedOnboarding = useAppStore(state => state.hasCompletedOnboarding);
   const [isSplashAnimationComplete, setSplashAnimationComplete] = useState(false);
+
+  // Silent backend & database warm-up on app open
+  useEffect(() => {
+    api.warmup();
+  }, []);
 
   // Local daily reminder notifications (offline — no server push)
   useLocalNotifications();

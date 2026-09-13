@@ -5,6 +5,7 @@ const rateLimit = require('express-rate-limit');
 const authRoutes = require('./routes/auth.routes');
 const wordRoutes = require('./routes/word.routes');
 const syncRoutes = require('./routes/sync.routes');
+const prisma = require('./services/db.service');
 
 const app = express();
 
@@ -14,17 +15,7 @@ app.set('trust proxy', 1);
 app.use(helmet());
 app.use(express.json({ limit: '5mb' }));
 
-// Global rate limiter
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  limit: 200, // Limit each IP to 200 requests per window (15 minutes)
-  standardHeaders: 'draft-7',
-  legacyHeaders: false,
-});
-app.use(limiter);
-
-const prisma = require('./services/db.service');
-
+// Health check endpoint (placed before rate limiter so pingers are never throttled)
 app.get('/health', async (req, res) => {
   try {
     // Verify database connectivity
@@ -44,6 +35,15 @@ app.get('/health', async (req, res) => {
     });
   }
 });
+
+// Global rate limiter
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  limit: 200, // Limit each IP to 200 requests per window (15 minutes)
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+});
+app.use(limiter);
 
 // Auth + cloud sync only (app is offline-first)
 app.use('/api/auth', authRoutes);

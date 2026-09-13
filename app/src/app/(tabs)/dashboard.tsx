@@ -286,7 +286,7 @@ export default function DashboardScreen() {
 
     // Check meaning length limit
     const meaningTooLong = validEntries.some(e => e.meaning.trim().length > 500) ||
-                           modifiedWords.some(w => w.meaning.trim().length > 500);
+      modifiedWords.some(w => w.meaning.trim().length > 500);
     if (meaningTooLong) {
       setErrorMessage('Meaning must be 500 characters or less.');
       return;
@@ -472,11 +472,11 @@ export default function DashboardScreen() {
             <Text style={s.greetingLabel}>{randomQuote}</Text>
           </View>
           <View>
-              <View style={s.headerRow2}>
-                <View style={s.nameContainer}>
-                  <Text style={s.displayNameText}>{displayName}</Text>
-                  <Text style={s.emojiText}> 👋</Text>
-                </View>
+            <View style={s.headerRow2}>
+              <View style={s.nameContainer}>
+                <Text style={s.displayNameText}>{displayName}</Text>
+                <Text style={s.emojiText}> 👋</Text>
+              </View>
               <View style={s.headerIcons}>
                 <AnimatedPressable onPress={() => setIsSearchActive(true)} style={s.iconBtn}>
                   <Search size={24} color={COLORS.charcoal} strokeWidth={2.5} />
@@ -897,7 +897,7 @@ const getStyles = (COLORS: any, isDarkMode: boolean) => StyleSheet.create({
     borderWidth: 1.5,
   },
   container: { flex: 1, backgroundColor: COLORS.bg },
-  content: { flex: 1, paddingHorizontal: 20, paddingTop: 12 }, 
+  content: { flex: 1, paddingHorizontal: 20, paddingTop: 12 },
 
   // Header — two-line layout
   header: {
