@@ -14,7 +14,13 @@ import AnimatedPressable from '../../components/AnimatedPressable';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Mail, User, Globe, ArrowLeft, KeyRound, RefreshCw } from 'lucide-react-native';
-import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
+import {
+  GoogleSignin,
+  statusCodes,
+  isSuccessResponse,
+  isCancelledResponse,
+  isErrorWithCode,
+} from '@react-native-google-signin/google-signin';
 import { useAppStore } from '../../store/useAppStore';
 import { api } from '../../services/api';
 import { performCloudSync } from '../../services/sync';
@@ -164,32 +170,48 @@ export default function AuthScreen() {
     setErrorMsg('');
     try {
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-      const userInfo = await GoogleSignin.signIn();
-      let idToken = userInfo.data?.idToken || (userInfo as any).idToken;
+      const response = await GoogleSignin.signIn();
 
-      if (!idToken) {
-        try {
-          const tokens = await GoogleSignin.getTokens();
-          idToken = tokens?.idToken;
-        } catch (tokenErr) {
-          console.warn('GoogleSignin.getTokens fallback failed:', tokenErr);
+      if (isCancelledResponse(response) || (response as any)?.type === 'cancelled') {
+        // User cancelled sign-in (e.g., pressed back button)
+        return;
+      }
+
+      if (isSuccessResponse(response) || (response as any)?.type === 'success') {
+        let idToken = (response as any)?.data?.idToken || (response as any)?.idToken;
+
+        if (!idToken) {
+          try {
+            const tokens = await GoogleSignin.getTokens();
+            idToken = tokens?.idToken;
+          } catch (tokenErr) {
+            console.warn('GoogleSignin.getTokens fallback failed:', tokenErr);
+          }
+        }
+
+        if (idToken) {
+          handleGoogleToken(idToken);
+        } else {
+          setErrorMsg('Google Sign-In failed: Web Client ID is missing or invalid in your configuration.');
         }
       }
-
-      if (idToken) {
-        handleGoogleToken(idToken);
-      } else {
-        setErrorMsg('Google Sign-In failed: Web Client ID is missing or invalid in your configuration.');
-      }
     } catch (error: any) {
-      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
-        // user cancelled the login flow
-      } else if (error.code === statusCodes.IN_PROGRESS) {
-        // operation in progress
-      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+      const isCancelled =
+        (isErrorWithCode(error) && error.code === statusCodes.SIGN_IN_CANCELLED) ||
+        error?.code === statusCodes.SIGN_IN_CANCELLED ||
+        error?.code === '12501' ||
+        (typeof error?.message === 'string' && error.message.toLowerCase().includes('cancel'));
+
+      if (isCancelled) {
+        // User cancelled the login flow by pressing back button or closing modal
+        return;
+      } else if (error?.code === statusCodes.IN_PROGRESS) {
+        // Operation in progress
+        return;
+      } else if (error?.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
         setErrorMsg('Play services not available or outdated');
       } else {
-        setErrorMsg(error.message || 'Google Sign-In failed. Please try again.');
+        setErrorMsg(error?.message || 'Google Sign-In failed. Please try again.');
       }
     }
   };
