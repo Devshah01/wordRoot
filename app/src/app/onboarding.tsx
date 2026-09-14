@@ -88,15 +88,15 @@ export default function OnboardingScreen() {
           <View style={s.card}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
               <Text style={s.inputLabel}>YOUR NAME OR NICKNAME</Text>
-              <Text style={{ fontSize: 12, fontFamily: 'Inter_500Medium', color: name.length === 18 ? COLORS.charcoal : COLORS.warmgray }}>
+              <Text style={{ fontSize: 12, fontFamily: 'Inter_500Medium', color: name.length === 18 ? '#E74C3C' : COLORS.warmgray }}>
                 {name.length}/18
               </Text>
             </View>
 
-            <View style={[s.inputRow, isFocused && s.inputRowFocused]}>
+            <View style={[s.inputRow, isFocused && s.inputRowFocused, name.length === 18 && { borderColor: '#E74C3C', borderWidth: 1.5 }]}>
               <User
                 size={20}
-                color={isFocused ? COLORS.charcoal : COLORS.warmgray}
+                color={name.length === 18 ? '#E74C3C' : (isFocused ? COLORS.charcoal : COLORS.warmgray)}
                 strokeWidth={isFocused ? 2.2 : 1.8}
               />
               <TextInput
@@ -121,6 +121,11 @@ export default function OnboardingScreen() {
                 </AnimatedPressable>
               )}
             </View>
+            {name.length === 18 && (
+              <Text style={{ fontSize: 12, fontFamily: 'Inter_500Medium', color: '#E74C3C', marginTop: 6, marginLeft: 2, marginBottom: 4 }}>
+                Maximum length is 18 characters
+              </Text>
+            )}
 
             {/* Primary Action Button */}
             <AnimatedPressable

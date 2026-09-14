@@ -277,8 +277,8 @@ export default function AuthScreen() {
             /* STEP 1: Request OTP Form */
             <View style={s.form}>
               {isSignUp && (
-                <View style={s.inputRow}>
-                  <User size={18} color={COLORS.warmgray} />
+                <View style={[s.inputRow, username.length === 18 && { borderColor: '#E74C3C', borderWidth: 1.5 }]}>
+                  <User size={18} color={username.length === 18 ? '#E74C3C' : COLORS.warmgray} />
                   <TextInput
                     placeholder="User Name"
                     placeholderTextColor={COLORS.warmgray}
@@ -288,10 +288,15 @@ export default function AuthScreen() {
                     autoCapitalize="none"
                     maxLength={18}
                   />
-                  <Text style={{ fontSize: 12, fontFamily: 'Inter_500Medium', color: username.length === 18 ? COLORS.charcoal : COLORS.warmgray }}>
+                  <Text style={{ fontSize: 12, fontFamily: 'Inter_500Medium', color: username.length === 18 ? '#E74C3C' : COLORS.warmgray }}>
                     {username.length}/18
                   </Text>
                 </View>
+                {username.length === 18 && (
+                  <Text style={{ fontSize: 12, fontFamily: 'Inter_500Medium', color: '#E74C3C', marginTop: 4, marginLeft: 4, marginBottom: 8 }}>
+                    Maximum length is 18 characters
+                  </Text>
+                )}
               )}
 
               <View style={s.inputRow}>

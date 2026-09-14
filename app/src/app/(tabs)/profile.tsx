@@ -238,7 +238,7 @@ export default function ProfileScreen() {
               <View style={[s.editNameCard, { backgroundColor: COLORS.white, borderColor: COLORS.bone }]}>
                 <Text style={[s.editNameTitle, { color: COLORS.charcoal }]}>Change Name</Text>
                 <TextInput
-                  style={[s.editNameInput, { color: COLORS.charcoal, borderBottomColor: COLORS.bone }]}
+                  style={[s.editNameInput, { color: COLORS.charcoal, borderBottomColor: editNameValue.length === 18 ? '#E74C3C' : COLORS.bone, borderBottomWidth: editNameValue.length === 18 ? 2 : 1 }]}
                   value={editNameValue}
                   onChangeText={setEditNameValue}
                   placeholder="Your Name"
@@ -246,9 +246,16 @@ export default function ProfileScreen() {
                   autoFocus
                   maxLength={18}
                 />
-                <Text style={{ alignSelf: 'flex-end', fontSize: 12, fontFamily: 'Inter_500Medium', color: editNameValue.length === 18 ? COLORS.charcoal : COLORS.warmgray, marginTop: 4 }}>
-                  {editNameValue.length}/18
-                </Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
+                  {editNameValue.length === 18 ? (
+                    <Text style={{ fontSize: 12, fontFamily: 'Inter_500Medium', color: '#E74C3C' }}>
+                      Maximum length is 18 characters
+                    </Text>
+                  ) : <View />}
+                  <Text style={{ fontSize: 12, fontFamily: 'Inter_500Medium', color: editNameValue.length === 18 ? '#E74C3C' : COLORS.warmgray }}>
+                    {editNameValue.length}/18
+                  </Text>
+                </View>
                 <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 24, gap: 16 }}>
                   <AnimatedPressable onPress={() => setIsEditingName(false)}>
                     <Text style={[s.editNameBtn, { color: COLORS.warmgray }]}>Cancel</Text>
