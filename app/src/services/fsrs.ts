@@ -39,18 +39,25 @@ const getCalendarDaysDifference = (laterDate: Date, earlierDate: Date): number =
   return Math.max(0, Math.round((d1.getTime() - d2.getTime()) / MS_PER_DAY));
 };
 
+const parseSafeDate = (rawDateStr: string | null | undefined): Date | null => {
+  if (!rawDateStr || typeof rawDateStr !== 'string') return null;
+  const d = new Date(rawDateStr);
+  if (isNaN(d.getTime())) return null;
+  return d;
+};
+
 export const calculateNextFSRSState = (word: Word, ratingString: 'remember' | 'forgot'): Word => {
   const now = new Date();
   
   // Calculate elapsed_days and scheduled_days accurately for ts-fsrs (calendar day difference)
-  const lastReviewDate = word.lastReview ? new Date(word.lastReview) : null;
-  const nextReviewDate = word.nextReview ? new Date(word.nextReview) : now;
+  const lastReviewDate = parseSafeDate(word.lastReview);
+  const nextReviewDate = parseSafeDate(word.nextReview) || now;
 
   const elapsed_days = lastReviewDate
     ? Math.max(0, getCalendarDaysDifference(now, lastReviewDate))
     : 0;
 
-  const scheduled_days = (lastReviewDate && word.nextReview)
+  const scheduled_days = (lastReviewDate && nextReviewDate)
     ? Math.max(1, getCalendarDaysDifference(nextReviewDate, lastReviewDate))
     : 0;
 
