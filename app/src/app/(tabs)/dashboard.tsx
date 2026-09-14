@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -23,7 +23,6 @@ import {
   computePendingReviewGroups,
   formatLocalDateString,
 } from '../../services/localData';
-import * as Crypto from 'expo-crypto';
 import { saveWordsBulk, deleteWord } from '../../db/queries';
 import { queueCloudChange } from '../../services/sync';
 import { generateDeterministicWordId } from '../../utils/idUtils';
