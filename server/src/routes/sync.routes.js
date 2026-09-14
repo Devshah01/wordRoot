@@ -13,11 +13,15 @@ function getDeterministicWordId(userId, rawWord) {
 
 // --- Zod Schemas ---
 
-const validCoercedDate = z.coerce
-  .date()
-  .refine((val) => !val || !isNaN(val.getTime()), {
-    message: 'Invalid date format',
-  });
+const validCoercedDate = z.preprocess(
+  (val) => (val === null || val === undefined || val === '' ? null : val),
+  z.coerce
+    .date()
+    .nullable()
+    .refine((val) => !val || !isNaN(val.getTime()), {
+      message: 'Invalid date format',
+    })
+);
 
 const fsrsSchema = z.object({
   fsrsStability: z.number().optional(),

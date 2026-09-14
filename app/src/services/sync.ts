@@ -178,7 +178,11 @@ async function queueMergedChanges(merged: Word[], serverWords: Word[]): Promise<
       await addSyncQueueItem(word.id, 'update', {
         word: word.word,
         meaning: word.meaning,
-        updatedWord: word,
+        updatedWord: {
+          ...word,
+          lastReview: word.lastReview ? new Date(word.lastReview).toISOString() : null,
+          nextReview: word.nextReview ? new Date(word.nextReview).toISOString() : word.nextReview,
+        },
       });
     }
   }
