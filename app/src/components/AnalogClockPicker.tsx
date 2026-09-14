@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import AnimatedPressable from './AnimatedPressable';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
@@ -40,12 +40,9 @@ export default function AnalogClockPicker({
   const [isPM, setIsPM] = useState(initialIsPM);
   const [displayHour, setDisplayHour] = useState(initial12Hour === 0 ? 12 : initial12Hour);
   const [displayMinute, setDisplayMinute] = useState(initMin);
+  const [prevInitialTime, setPrevInitialTime] = useState(initialTime);
 
   // Refs that always hold the latest state values.
-  // updateHour / updateMinute are called via runOnJS from inside a Reanimated
-  // gesture which captures those functions only once at gesture-creation time.
-  // Without refs the closures would read stale state (e.g. the minute value
-  // from when the gesture was first built, not the current value).
   const displayHourRef = useRef(initial12Hour === 0 ? 12 : initial12Hour);
   const displayMinuteRef = useRef(initMin);
   const isPMRef = useRef(initialIsPM);
@@ -60,82 +57,81 @@ export default function AnalogClockPicker({
   const hourAngle = useSharedValue((initial12Hour % 12) * 30);
   const minuteAngle = useSharedValue(initMin * 6);
 
-  // Sync state & angles if initialTime prop changes
-  useEffect(() => {
+  // Adjust state during render if initialTime prop changes
+  if (initialTime !== prevInitialTime) {
+    setPrevInitialTime(initialTime);
     const [hStr, mStr] = (initialTime || "09:00").split(':');
     const h = parseInt(hStr, 10);
     const m = parseInt(mStr, 10);
-    if (isNaN(h) || isNaN(m)) return;
+    if (!isNaN(h) && !isNaN(m)) {
+      const pm = h >= 12;
+      const h12 = h % 12;
+      const resolvedH12 = h12 === 0 ? 12 : h12;
+      setIsPM(pm);
+      setDisplayHour(resolvedH12);
+      setDisplayMinute(m);
+      hourAngle.value = (h12 % 12) * 30;
+      minuteAngle.value = m * 6;
+    }
+  }
 
-    const pm = h >= 12;
-    const h12 = h % 12;
-    const resolvedH12 = h12 === 0 ? 12 : h12;
-
-    setIsPM(pm);
-    setDisplayHour(resolvedH12);
-    setDisplayMinute(m);
-    hourAngle.value = (h12 % 12) * 30;
-    minuteAngle.value = m * 6;
-  }, [initialTime]); // hourAngle / minuteAngle are stable Reanimated shared values — intentionally omitted
-
-  const handleSetMode = (m: 'hour' | 'minute') => {
+  const handleSetMode = useCallback((m: 'hour' | 'minute') => {
     setMode(m);
     activeMode.value = m;
-  };
+  }, [activeMode]);
 
-  const syncTime = (h12: number, m: number, pm: boolean) => {
+  const syncTime = useCallback((h12: number, m: number, pm: boolean) => {
     let h24 = h12;
     if (pm && h12 !== 12) h24 += 12;
     if (!pm && h12 === 12) h24 = 0;
     
     const formatted = `${h24.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
     onTimeChange(formatted);
-  };
+  }, [onTimeChange]);
 
-  // Read from refs so that even when called via runOnJS from a gesture
-  // (which captured these functions at creation time), we always use the
-  // current hour/minute/AM-PM values — not stale closure values.
-  const updateHour = (h: number) => {
+  const updateHour = useCallback((h: number) => {
     setDisplayHour(h);
     syncTime(h, displayMinuteRef.current, isPMRef.current);
-  };
+  }, [syncTime]);
 
-  const updateMinute = (m: number) => {
+  const updateMinute = useCallback((m: number) => {
     setDisplayMinute(m);
     syncTime(displayHourRef.current, m, isPMRef.current);
-  };
+  }, [syncTime]);
 
   const handleToggleAMPM = (newIsPM: boolean) => {
     setIsPM(newIsPM);
     syncTime(displayHourRef.current, displayMinuteRef.current, newIsPM);
   };
 
-  const panGesture = Gesture.Pan()
-    .minDistance(0)
-    .onUpdate((e) => {
-      const dx = e.x - CENTER;
-      const dy = e.y - CENTER;
-      
-      let theta = Math.atan2(dy, dx) * (180 / Math.PI) + 90;
-      if (theta < 0) theta += 360;
-      
-      if (activeMode.value === 'hour') {
-        let h = Math.round(theta / 30);
-        if (h === 0 || h === 12) h = 12;
-        hourAngle.value = (h % 12) * 30;
-        runOnJS(updateHour)(h);
-      } else {
-        let m = Math.round(theta / 6);
-        if (m >= 60) m = 0;
-        minuteAngle.value = m * 6;
-        runOnJS(updateMinute)(m);
-      }
-    })
-    .onEnd(() => {
-      if (activeMode.value === 'hour') {
-        runOnJS(handleSetMode)('minute');
-      }
-    });
+  const panGesture = useMemo(() => {
+    return Gesture.Pan()
+      .minDistance(0)
+      .onUpdate((e) => {
+        const dx = e.x - CENTER;
+        const dy = e.y - CENTER;
+        
+        let theta = Math.atan2(dy, dx) * (180 / Math.PI) + 90;
+        if (theta < 0) theta += 360;
+        
+        if (activeMode.value === 'hour') {
+          let h = Math.round(theta / 30);
+          if (h === 0 || h === 12) h = 12;
+          hourAngle.value = (h % 12) * 30;
+          runOnJS(updateHour)(h);
+        } else {
+          let m = Math.round(theta / 6);
+          if (m >= 60) m = 0;
+          minuteAngle.value = m * 6;
+          runOnJS(updateMinute)(m);
+        }
+      })
+      .onEnd(() => {
+        if (activeMode.value === 'hour') {
+          runOnJS(handleSetMode)('minute');
+        }
+      });
+  }, [activeMode, hourAngle, minuteAngle, updateHour, updateMinute, handleSetMode]);
 
   const hourHandStyle = useAnimatedStyle(() => {
     return {
