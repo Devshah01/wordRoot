@@ -916,8 +916,11 @@ const getStyles = (COLORS: any, isDarkMode: boolean) => StyleSheet.create({
     alignItems: 'center',
   },
   nameContainer: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
+    marginRight: 8,
   },
   displayNameText: {
     fontFamily: 'Outfit_700Bold',

@@ -218,10 +218,10 @@ export default function ProfileScreen() {
                   <Text style={[s.avatarTextSmall, { color: COLORS.bg }]}>{initial}</Text>
                 </View>
                 <View style={s.userInfoTextWrap}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}>
                     <Text style={[s.userNameText, { color: COLORS.charcoal }]}>{displayName}</Text>
                     {!isAuthenticated && (
-                      <AnimatedPressable onPress={() => { setEditNameValue(displayName); setIsEditingName(true); }} style={{ paddingHorizontal: 8 }}>
+                      <AnimatedPressable onPress={() => { setEditNameValue(displayName); setIsEditingName(true); }} style={{ paddingHorizontal: 4 }}>
                         <Text style={{ fontFamily: 'Inter_600SemiBold', fontSize: 14, color: COLORS.warmgray }}>Edit</Text>
                       </AnimatedPressable>
                     )}
