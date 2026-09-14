@@ -86,7 +86,12 @@ export default function OnboardingScreen() {
 
           {/* Main Card */}
           <View style={s.card}>
-            <Text style={s.inputLabel}>YOUR NAME OR NICKNAME</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <Text style={s.inputLabel}>YOUR NAME OR NICKNAME</Text>
+              <Text style={{ fontSize: 12, fontFamily: 'Inter_500Medium', color: name.length === 18 ? COLORS.charcoal : COLORS.warmgray }}>
+                {name.length}/18
+              </Text>
+            </View>
 
             <View style={[s.inputRow, isFocused && s.inputRowFocused]}>
               <User
@@ -104,7 +109,7 @@ export default function OnboardingScreen() {
                 onBlur={() => setIsFocused(false)}
                 returnKeyType="done"
                 onSubmitEditing={handleContinue}
-                maxLength={20}
+                maxLength={18}
               />
               {name.trim().length > 0 && (
                 <AnimatedPressable

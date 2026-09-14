@@ -286,8 +286,11 @@ export default function AuthScreen() {
                     onChangeText={setUsername}
                     style={s.input}
                     autoCapitalize="none"
-                    maxLength={20}
+                    maxLength={18}
                   />
+                  <Text style={{ fontSize: 12, fontFamily: 'Inter_500Medium', color: username.length === 18 ? COLORS.charcoal : COLORS.warmgray }}>
+                    {username.length}/18
+                  </Text>
                 </View>
               )}
 

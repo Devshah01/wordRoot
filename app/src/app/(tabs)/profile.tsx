@@ -244,8 +244,11 @@ export default function ProfileScreen() {
                   placeholder="Your Name"
                   placeholderTextColor={COLORS.warmgray}
                   autoFocus
-                  maxLength={20}
+                  maxLength={18}
                 />
+                <Text style={{ alignSelf: 'flex-end', fontSize: 12, fontFamily: 'Inter_500Medium', color: editNameValue.length === 18 ? COLORS.charcoal : COLORS.warmgray, marginTop: 4 }}>
+                  {editNameValue.length}/18
+                </Text>
                 <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 24, gap: 16 }}>
                   <AnimatedPressable onPress={() => setIsEditingName(false)}>
                     <Text style={[s.editNameBtn, { color: COLORS.warmgray }]}>Cancel</Text>
