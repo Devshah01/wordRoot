@@ -15,7 +15,7 @@ import AnimatedPressable from '../../components/AnimatedPressable';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, runOnJS } from 'react-native-reanimated';
-import { Settings, LogOut, X, ChevronRight, Trophy, Clock, Check, Cloud, RefreshCw, Smartphone, Trash2, CheckCircle2, UserX, AlertTriangle, ShieldCheck, ExternalLink } from 'lucide-react-native';
+import { Settings, LogOut, X, ChevronRight, Trophy, Clock, Check, Cloud, RefreshCw, Smartphone, Trash2, CheckCircle2, UserX, AlertTriangle, ShieldCheck, ExternalLink, User, Edit2 } from 'lucide-react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import AnalogClockPicker from '../../components/AnalogClockPicker';
 import { useAppStore } from '../../store/useAppStore';
@@ -218,11 +218,15 @@ export default function ProfileScreen() {
                   <Text style={[s.avatarTextSmall, { color: COLORS.bg }]}>{initial}</Text>
                 </View>
                 <View style={s.userInfoTextWrap}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
                     <Text style={[s.userNameText, { color: COLORS.charcoal }]}>{displayName}</Text>
                     {!isAuthenticated && (
-                      <AnimatedPressable onPress={() => { setEditNameValue(displayName); setIsEditingName(true); }} style={{ paddingHorizontal: 4 }}>
-                        <Text style={{ fontFamily: 'Inter_600SemiBold', fontSize: 14, color: COLORS.warmgray }}>Edit</Text>
+                      <AnimatedPressable
+                        onPress={() => { setEditNameValue(displayName); setIsEditingName(true); }}
+                        style={[s.editPillBtn, { backgroundColor: COLORS.card, borderColor: COLORS.bone }]}
+                      >
+                        <Edit2 size={12} color={COLORS.charcoal} strokeWidth={2} />
+                        <Text style={[s.editPillText, { color: COLORS.charcoal }]}>Edit</Text>
                       </AnimatedPressable>
                     )}
                   </View>
@@ -233,35 +237,71 @@ export default function ProfileScreen() {
           
 
           {/* Edit Name Modal */}
-          <Modal visible={isEditingName} transparent animationType="fade">
+          <Modal visible={isEditingName} transparent animationType="fade" onRequestClose={() => setIsEditingName(false)}>
             <View style={s.modalOverlayCenter}>
               <View style={[s.editNameCard, { backgroundColor: COLORS.white, borderColor: COLORS.bone }]}>
-                <Text style={[s.editNameTitle, { color: COLORS.charcoal }]}>Change Name</Text>
-                <TextInput
-                  style={[s.editNameInput, { color: COLORS.charcoal, borderBottomColor: editNameValue.length === 18 ? '#E74C3C' : COLORS.bone, borderBottomWidth: editNameValue.length === 18 ? 2 : 1 }]}
-                  value={editNameValue}
-                  onChangeText={setEditNameValue}
-                  placeholder="Your Name"
-                  placeholderTextColor={COLORS.warmgray}
-                  autoFocus
-                  maxLength={18}
-                />
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
+                <View style={s.editNameHeaderRow}>
+                  <View style={[s.editNameHeaderIconWrap, { backgroundColor: COLORS.card, borderColor: COLORS.bone }]}>
+                    <User size={20} color={COLORS.charcoal} strokeWidth={2} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[s.editNameTitle, { color: COLORS.charcoal }]}>Change Name</Text>
+                    <Text style={[s.editNameSubTitle, { color: COLORS.warmgray }]}>Enter your display name for offline mode</Text>
+                  </View>
+                  <AnimatedPressable onPress={() => setIsEditingName(false)} style={{ padding: 4 }}>
+                    <X size={20} color={COLORS.warmgray} />
+                  </AnimatedPressable>
+                </View>
+
+                <View style={[
+                  s.editNameInputContainer,
+                  {
+                    backgroundColor: COLORS.card,
+                    borderColor: editNameValue.length === 18 ? '#E74C3C' : COLORS.bone,
+                    borderWidth: editNameValue.length === 18 ? 2 : 1,
+                  }
+                ]}>
+                  <User size={18} color={COLORS.warmgray} style={{ marginRight: 10 }} />
+                  <TextInput
+                    style={[s.editNameInput, { color: COLORS.charcoal }]}
+                    value={editNameValue}
+                    onChangeText={setEditNameValue}
+                    placeholder="Your Name"
+                    placeholderTextColor={COLORS.warmgray}
+                    autoFocus
+                    maxLength={18}
+                  />
+                  {editNameValue.length > 0 && (
+                    <AnimatedPressable onPress={() => setEditNameValue('')} style={{ padding: 4 }}>
+                      <X size={16} color={COLORS.warmgray} />
+                    </AnimatedPressable>
+                  )}
+                </View>
+
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
                   {editNameValue.length === 18 ? (
                     <Text style={{ fontSize: 12, fontFamily: 'Inter_500Medium', color: '#E74C3C' }}>
                       Maximum length is 18 characters
                     </Text>
                   ) : <View />}
-                  <Text style={{ fontSize: 12, fontFamily: 'Inter_500Medium', color: editNameValue.length === 18 ? '#E74C3C' : COLORS.warmgray }}>
+                  <Text style={{ fontSize: 12, fontFamily: 'Inter_500Medium', color: editNameValue.length === 18 ? '#E74C3C' : COLORS.warmgray, marginLeft: 'auto' }}>
                     {editNameValue.length}/18
                   </Text>
                 </View>
-                <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 24, gap: 16 }}>
-                  <AnimatedPressable onPress={() => setIsEditingName(false)}>
-                    <Text style={[s.editNameBtn, { color: COLORS.warmgray }]}>Cancel</Text>
+
+                <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 24, gap: 12 }}>
+                  <AnimatedPressable
+                    onPress={() => setIsEditingName(false)}
+                    style={[s.modalBtnCancel, { backgroundColor: COLORS.card, borderColor: COLORS.bone }]}
+                  >
+                    <Text style={[s.modalBtnCancelText, { color: COLORS.charcoal }]}>Cancel</Text>
                   </AnimatedPressable>
-                  <AnimatedPressable onPress={handleSaveName}>
-                    <Text style={[s.editNameBtn, { color: COLORS.charcoal }]}>Save</Text>
+                  <AnimatedPressable
+                    onPress={handleSaveName}
+                    style={[s.modalBtnSave, { backgroundColor: COLORS.charcoal }]}
+                  >
+                    <Check size={16} color={COLORS.bg} strokeWidth={2.5} style={{ marginRight: 6 }} />
+                    <Text style={[s.modalBtnSaveText, { color: COLORS.bg }]}>Save</Text>
                   </AnimatedPressable>
                 </View>
               </View>
@@ -736,12 +776,87 @@ const getStyles = (COLORS: any, SCREEN_WIDTH: number) => StyleSheet.create({
   },
   clockBtnText: { fontFamily: 'Inter_600SemiBold', fontSize: 15 },
   
+  // Edit Pill Button in Profile
+  editPillBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  editPillText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 12,
+  },
+
   // Edit Name Modal
   modalOverlayCenter: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 24 },
-  editNameCard: { width: '100%', borderRadius: 24, padding: 24, borderWidth: 1 },
-  editNameTitle: { fontFamily: 'Outfit_700Bold', fontSize: 24, marginBottom: 16 },
-  editNameInput: { fontFamily: 'Inter_500Medium', fontSize: 16, paddingVertical: 12, borderBottomWidth: 1, marginBottom: 8 },
-  editNameBtn: { fontFamily: 'Inter_600SemiBold', fontSize: 16 },
+  editNameCard: {
+    width: '100%',
+    borderRadius: 24,
+    padding: 24,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  editNameHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 20,
+  },
+  editNameHeaderIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  editNameTitle: { fontFamily: 'Outfit_700Bold', fontSize: 20 },
+  editNameSubTitle: { fontFamily: 'Inter_400Regular', fontSize: 13, marginTop: 2 },
+  editNameInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 4,
+  },
+  editNameInput: {
+    flex: 1,
+    fontFamily: 'Inter_500Medium',
+    fontSize: 16,
+    paddingVertical: 12,
+  },
+  modalBtnCancel: {
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalBtnCancelText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 14,
+  },
+  modalBtnSave: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 14,
+  },
+  modalBtnSaveText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 14,
+  },
 
   // Logout Modal
   logoutDialogCard: {
