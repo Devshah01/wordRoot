@@ -835,6 +835,7 @@ export default function DashboardScreen() {
                 onChangeText={setSearchQuery}
                 style={s.searchInput}
                 autoFocus
+                maxLength={100}
               />
               {searchQuery.length > 0 && (
                 <AnimatedPressable onPress={() => setSearchQuery('')}>

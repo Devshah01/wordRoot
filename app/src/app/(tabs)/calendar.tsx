@@ -811,6 +811,7 @@ export default function CalendarScreen() {
                   onChangeText={setSearchQuery}
                   style={s.searchInput}
                   autoFocus
+                  maxLength={100}
                 />
                 {searchQuery.length > 0 && (
                   <AnimatedPressable onPress={() => setSearchQuery('')}>
