@@ -244,6 +244,7 @@ export default function ProfileScreen() {
                   placeholder="Your Name"
                   placeholderTextColor={COLORS.warmgray}
                   autoFocus
+                  maxLength={20}
                 />
                 <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 24, gap: 16 }}>
                   <AnimatedPressable onPress={() => setIsEditingName(false)}>

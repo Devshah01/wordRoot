@@ -107,10 +107,6 @@ export default function AuthScreen() {
         setErrorMsg('Username is required for sign up');
         return;
       }
-      if (trimmedUsername.length < 2) {
-        setErrorMsg('Username must be at least 2 characters');
-        return;
-      }
     }
 
     setLoading(true);
@@ -290,6 +286,7 @@ export default function AuthScreen() {
                     onChangeText={setUsername}
                     style={s.input}
                     autoCapitalize="none"
+                    maxLength={20}
                   />
                 </View>
               )}

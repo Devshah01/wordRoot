@@ -104,7 +104,7 @@ export default function OnboardingScreen() {
                 onBlur={() => setIsFocused(false)}
                 returnKeyType="done"
                 onSubmitEditing={handleContinue}
-                maxLength={30}
+                maxLength={20}
               />
               {name.trim().length > 0 && (
                 <AnimatedPressable
