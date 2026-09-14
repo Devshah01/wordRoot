@@ -86,8 +86,6 @@ export default function ReviewScreen() {
   const activeScrollRef = isFlipped ? backScrollRef : frontScrollRef;
 
   useEffect(() => {
-    setFrontScrollY(0);
-    setBackScrollY(0);
     frontScrollRef.current?.scrollTo({ y: 0, animated: false });
     backScrollRef.current?.scrollTo({ y: 0, animated: false });
   }, [currentIndex, isFlipped]);

@@ -57,9 +57,9 @@ export default function CalendarScreen() {
     if (focusDate) {
       const parsed = parseDateSafe(focusDate);
       if (!isNaN(parsed.getTime())) {
-        setSelectedDate(parsed);
-        setCurrentMonth(parsed.getMonth());
-        setCurrentYear(parsed.getFullYear());
+        setSelectedDate((prev) => (prev.getTime() !== parsed.getTime() ? parsed : prev));
+        setCurrentMonth((prev) => (prev !== parsed.getMonth() ? parsed.getMonth() : prev));
+        setCurrentYear((prev) => (prev !== parsed.getFullYear() ? parsed.getFullYear() : prev));
       }
     }
   }, [focusDate]);

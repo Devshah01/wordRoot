@@ -1,5 +1,4 @@
-/* eslint-disable react/no-unescaped-entities */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -79,25 +78,16 @@ export default function DashboardScreen() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchActive, setIsSearchActive] = useState(false);
-  const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isBellOpen, setIsBellOpen] = useState(false);
-  const [pendingReviews, setPendingReviews] = useState<any[]>([]);
   const [isVocabCardExpanded, setIsVocabCardExpanded] = useState(false);
   const [editedSavedWords, setEditedSavedWords] = useState<any[]>([]);
   const [currentDashboardDate, setCurrentDashboardDate] = useState<Date>(new Date());
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [errorWord, setErrorWord] = useState<string | null>(null);
 
-  const [stats, setStats] = useState({
-    totalWords: 0,
-    wordsAddedToday: 0,
-  });
-
-  // Calculate local stats and pending reviews from SQLite (offline-first)
-  useEffect(() => {
-    setStats(computeLocalStats(words));
-    setPendingReviews(computePendingReviewGroups(words));
-  }, [words]);
+  // Derive local stats and pending reviews from SQLite store words during render
+  const stats = useMemo(() => computeLocalStats(words), [words]);
+  const pendingReviews = useMemo(() => computePendingReviewGroups(words), [words]);
 
   const [randomQuote] = useState(() => {
     return ENCOURAGING_QUOTES[Math.floor(Math.random() * ENCOURAGING_QUOTES.length)];
@@ -154,12 +144,9 @@ export default function DashboardScreen() {
       }
     });
 
-  useEffect(() => {
+  const searchResults = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) {
-      setSearchResults([]);
-      return;
-    }
+    if (!q) return [];
 
     const draftWords = vocabLines
       .filter(l => l.word.trim() && l.meaning.trim())
@@ -181,31 +168,21 @@ export default function DashboardScreen() {
       .filter(w => w.word && w.word.trim().toLowerCase().startsWith(q))
       .sort((a, b) => a.word.trim().toLowerCase().localeCompare(b.word.trim().toLowerCase()));
 
-    // For single letter search (e.g. "y"), strictly dictionary format: only words starting with that letter
+    // For single letter search, return strictly prefix matches
     if (q.length === 1) {
-      setSearchResults(startsWithMatches);
-      return;
+      return startsWithMatches;
     }
 
-    // For multi-letter searches, also include words containing query in word or meaning after prefix matches
+    // For multi-letter searches, include words containing query in word or meaning after prefix matches
     const containsMatches = uniquePool
       .filter(w =>
-        w.word &&
         !w.word.trim().toLowerCase().startsWith(q) &&
-        w.word.trim().toLowerCase().includes(q)
+        (w.word.trim().toLowerCase().includes(q) || w.meaning.trim().toLowerCase().includes(q))
       )
       .sort((a, b) => a.word.trim().toLowerCase().localeCompare(b.word.trim().toLowerCase()));
 
-    const meaningMatches = uniquePool
-      .filter(w =>
-        w.meaning &&
-        !w.word.trim().toLowerCase().includes(q) &&
-        w.meaning.toLowerCase().includes(q)
-      )
-      .sort((a, b) => a.word.trim().toLowerCase().localeCompare(b.word.trim().toLowerCase()));
-
-    setSearchResults([...startsWithMatches, ...containsMatches, ...meaningMatches]);
-  }, [searchQuery, words, vocabLines]);
+    return [...startsWithMatches, ...containsMatches];
+  }, [searchQuery, vocabLines, words]);
 
   const addVocabLine = () => {
     if (errorMessage || errorWord) { setErrorMessage(null); setErrorWord(null); }
@@ -851,7 +828,7 @@ export default function DashboardScreen() {
                   <AnimatedPressable key={`search-${index}`} onPress={() => handleSearchResultClick(item)} style={s.searchResultRow}>
                     <View style={s.searchRowTop}>
                       <Text style={s.searchWord} numberOfLines={1}>{item.word}</Text>
-                      <Text style={s.searchDate}>{formatLocalDateString(item.dateAdded || item.createdAt || new Date())}</Text>
+                      <Text style={s.searchDate}>{formatLocalDateString(item.dateAdded || (item as any).createdAt || new Date().toISOString())}</Text>
                     </View>
                     <Text style={s.searchMeaning}>{item.meaning}</Text>
                   </AnimatedPressable>
