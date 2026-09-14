@@ -474,8 +474,8 @@ export default function DashboardScreen() {
           <View>
             <View style={s.headerRow2}>
               <View style={s.nameContainer}>
-                <Text style={s.displayNameText}>{displayName}</Text>
-                <Text style={s.emojiText}> 👋</Text>
+                <Text style={[s.displayNameText, displayName.length > 15 && { fontSize: 20 }]}>{displayName}</Text>
+                <Text style={[s.emojiText, displayName.length > 15 && { fontSize: 20 }]}> 👋</Text>
               </View>
               <View style={s.headerIcons}>
                 <AnimatedPressable onPress={() => setIsSearchActive(true)} style={s.iconBtn}>
