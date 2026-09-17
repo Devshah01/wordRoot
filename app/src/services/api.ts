@@ -54,7 +54,10 @@ async function request(endpoint: string, options: RequestInit = {}) {
     if (typeof msg === 'string' && (msg.includes('<html') || msg.includes('<!DOCTYPE') || msg.length > 200)) {
       msg = `Server returned status ${response.status} (${response.statusText || 'Error'}).`;
     }
-    throw new Error(msg || 'Something went wrong');
+    const err: any = new Error(msg || 'Something went wrong');
+    err.status = response.status;
+    err.data = data;
+    throw err;
   }
 
   return data;

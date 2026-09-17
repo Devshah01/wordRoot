@@ -7,6 +7,7 @@ import {
   addSyncQueueItem,
   getSyncMetadata,
   setSyncMetadata,
+  incrementSyncQueueRetryCount,
 } from '../db/queries';
 import { api } from './api';
 import { Word, LocalWord, useAppStore } from '../store/useAppStore';
@@ -345,20 +346,33 @@ export const triggerSync = async (
 
           await setSyncMetadata('last_push_at', new Date().toISOString());
         } else {
-          console.warn(`Sync chunk rejected by server: ${response?.error || 'Unknown error'}. Evicting rejected items.`);
-          await removeSyncQueueItems(chunkItemIds);
+          console.warn(`Sync chunk response indicates failure: ${response?.error || 'Unknown error'}. Incrementing retries.`);
+          await incrementSyncQueueRetryCount(chunkItemIds);
           anyBatchFailed = true;
           break;
         }
       } catch (chunkErr: any) {
         console.error(`Sync chunk failed (${i} to ${i + validChunk.length}):`, chunkErr);
+        const status = chunkErr?.status;
         const errorMsg = chunkErr?.message || '';
         const isNetworkError = errorMsg.includes('Cannot reach server') || errorMsg.includes('Network request failed');
 
-        if (!isNetworkError) {
-          console.warn(`Evicting sync chunk due to non-network server error: ${errorMsg}`);
+        if (isNetworkError) {
+          console.log('[Sync] Network unavailable. Retaining queue for next connection.');
+        } else if (status === 401) {
+          console.warn('[Sync] Auth token expired (401). Retaining items in queue for re-login.');
+        } else if (status >= 500 || status === 429) {
+          console.warn(`[Sync] Transient server error (${status || '5xx'}). Incrementing retry count.`);
+          await incrementSyncQueueRetryCount(chunkItemIds);
+        } else if (status === 400 || status === 422) {
+          console.error(`[Sync] Server rejected malformed payload (${status}). Evicting rejected items.`);
           await removeSyncQueueItems(chunkItemIds);
+        } else {
+          // Default fallback: Increment retry count instead of evicting immediately
+          console.warn(`[Sync] Unhandled sync error (${status || 'unknown'}). Incrementing retry count.`);
+          await incrementSyncQueueRetryCount(chunkItemIds);
         }
+
         anyBatchFailed = true;
         break;
       }
