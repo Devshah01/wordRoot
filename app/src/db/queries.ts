@@ -113,6 +113,53 @@ export const clearAllLocalData = async () => {
   });
 };
 
+// Helper to merge an existing user word and an incoming guest word for the same word key
+const mergeWordRecords = (existing: Word, incoming: Word, newId: string): Word => {
+  let reviewWinner = existing;
+  if (existing.lastReview && incoming.lastReview) {
+    if (new Date(existing.lastReview).getTime() !== new Date(incoming.lastReview).getTime()) {
+      reviewWinner = new Date(existing.lastReview) > new Date(incoming.lastReview) ? existing : incoming;
+    } else if (existing.reviewCount !== incoming.reviewCount) {
+      reviewWinner = existing.reviewCount > incoming.reviewCount ? existing : incoming;
+    }
+  } else if (existing.lastReview && !incoming.lastReview) {
+    reviewWinner = existing;
+  } else if (!existing.lastReview && incoming.lastReview) {
+    reviewWinner = incoming;
+  } else if (existing.reviewCount !== incoming.reviewCount) {
+    reviewWinner = existing.reviewCount > incoming.reviewCount ? existing : incoming;
+  }
+
+  let contentWinner = existing;
+  if (existing.meaning && !incoming.meaning) {
+    contentWinner = existing;
+  } else if (!existing.meaning && incoming.meaning) {
+    contentWinner = incoming;
+  } else if (existing.meaning !== incoming.meaning) {
+    contentWinner = incoming.meaning.length >= existing.meaning.length ? incoming : existing;
+  }
+
+  const earliestDateAdded =
+    existing.dateAdded && incoming.dateAdded
+      ? (new Date(existing.dateAdded) <= new Date(incoming.dateAdded) ? existing.dateAdded : incoming.dateAdded)
+      : existing.dateAdded || incoming.dateAdded;
+
+  return {
+    id: newId,
+    word: incoming.word || existing.word,
+    meaning: contentWinner.meaning,
+    dateAdded: earliestDateAdded,
+    fsrsStability: reviewWinner.fsrsStability,
+    fsrsDifficulty: reviewWinner.fsrsDifficulty,
+    fsrsLapses: reviewWinner.fsrsLapses,
+    fsrsReps: reviewWinner.fsrsReps,
+    fsrsState: reviewWinner.fsrsState,
+    lastReview: reviewWinner.lastReview,
+    nextReview: reviewWinner.nextReview,
+    reviewCount: reviewWinner.reviewCount,
+  };
+};
+
 // Migrate words created in guest mode to user-prefixed IDs upon authentication
 export const migrateGuestWordsToUser = async (userId: string): Promise<void> => {
   if (!userId) return;
@@ -125,11 +172,38 @@ export const migrateGuestWordsToUser = async (userId: string): Promise<void> => 
       const newId = await generateDeterministicWordId(userId, word.word);
 
       if (oldId !== newId) {
-        await db.runAsync('UPDATE words SET id = ? WHERE id = ?;', [newId, oldId]);
+        // Check if a row with newId already exists in local SQLite database
+        const existingRows = await db.getAllAsync('SELECT * FROM words WHERE id = ?;', [newId]);
+
+        if (existingRows.length > 0) {
+          const existingWord = existingRows[0] as Word;
+          const merged = mergeWordRecords(existingWord, word, newId);
+
+          // Update the existing record with merged values
+          await db.runAsync(
+            `INSERT OR REPLACE INTO words 
+              (id, word, meaning, dateAdded, fsrsStability, fsrsDifficulty, fsrsLapses, fsrsReps, fsrsState, lastReview, nextReview, reviewCount)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              merged.id, merged.word, merged.meaning, merged.dateAdded, merged.fsrsStability,
+              merged.fsrsDifficulty, merged.fsrsLapses, merged.fsrsReps, merged.fsrsState,
+              merged.lastReview, merged.nextReview, merged.reviewCount
+            ]
+          );
+
+          // Remove the obsolete guest row
+          await db.runAsync('DELETE FROM words WHERE id = ?;', [oldId]);
+        } else {
+          // No collision with existing record, direct ID update is safe
+          await db.runAsync('UPDATE words SET id = ? WHERE id = ?;', [newId, oldId]);
+        }
+
+        // Redirect any pending sync queue entries pointing to oldId
         await db.runAsync('UPDATE sync_queue SET wordId = ? WHERE wordId = ?;', [newId, oldId]);
       }
     }
   });
 };
+
 
 
