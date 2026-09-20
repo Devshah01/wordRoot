@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import AnimatedPressable from './AnimatedPressable';
 import { GestureDetector, Gesture } from 'react-native-gesture-handler';
@@ -42,14 +42,10 @@ export default function AnalogClockPicker({
   const [displayMinute, setDisplayMinute] = useState(initMin);
   const [prevInitialTime, setPrevInitialTime] = useState(initialTime);
 
-  // Refs that always hold the latest state values.
+  // Refs that always hold the latest state values synchronously.
   const displayHourRef = useRef(initial12Hour === 0 ? 12 : initial12Hour);
   const displayMinuteRef = useRef(initMin);
   const isPMRef = useRef(initialIsPM);
-
-  useEffect(() => { displayHourRef.current = displayHour; }, [displayHour]);
-  useEffect(() => { displayMinuteRef.current = displayMinute; }, [displayMinute]);
-  useEffect(() => { isPMRef.current = isPM; }, [isPM]);
 
   const [mode, setMode] = useState<'hour' | 'minute'>('hour');
   const activeMode = useSharedValue<'hour' | 'minute'>('hour');
@@ -67,6 +63,9 @@ export default function AnalogClockPicker({
       const pm = h >= 12;
       const h12 = h % 12;
       const resolvedH12 = h12 === 0 ? 12 : h12;
+      isPMRef.current = pm;
+      displayHourRef.current = resolvedH12;
+      displayMinuteRef.current = m;
       setIsPM(pm);
       setDisplayHour(resolvedH12);
       setDisplayMinute(m);
@@ -90,16 +89,19 @@ export default function AnalogClockPicker({
   }, [onTimeChange]);
 
   const updateHour = useCallback((h: number) => {
+    displayHourRef.current = h;
     setDisplayHour(h);
     syncTime(h, displayMinuteRef.current, isPMRef.current);
   }, [syncTime]);
 
   const updateMinute = useCallback((m: number) => {
+    displayMinuteRef.current = m;
     setDisplayMinute(m);
     syncTime(displayHourRef.current, m, isPMRef.current);
   }, [syncTime]);
 
   const handleToggleAMPM = (newIsPM: boolean) => {
+    isPMRef.current = newIsPM;
     setIsPM(newIsPM);
     syncTime(displayHourRef.current, displayMinuteRef.current, newIsPM);
   };
