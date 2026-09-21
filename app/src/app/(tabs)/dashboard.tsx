@@ -83,6 +83,15 @@ export default function DashboardScreen() {
   const [currentDashboardDate, setCurrentDashboardDate] = useState<Date>(new Date());
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [errorWord, setErrorWord] = useState<string | null>(null);
+  const [duplicateDraftIndices, setDuplicateDraftIndices] = useState<number[]>([]);
+  const [duplicateSavedIndices, setDuplicateSavedIndices] = useState<number[]>([]);
+
+  const clearErrors = () => {
+    if (errorMessage) setErrorMessage(null);
+    if (errorWord) setErrorWord(null);
+    if (duplicateDraftIndices.length > 0) setDuplicateDraftIndices([]);
+    if (duplicateSavedIndices.length > 0) setDuplicateSavedIndices([]);
+  };
 
   // Derive local stats and pending reviews from SQLite store words during render
   const stats = useMemo(() => computeLocalStats(words), [words]);
@@ -184,27 +193,26 @@ export default function DashboardScreen() {
   }, [searchQuery, vocabLines, words]);
 
   const addVocabLine = () => {
-    if (errorMessage || errorWord) { setErrorMessage(null); setErrorWord(null); }
+    clearErrors();
     setVocabLines([...vocabLines, { word: '', meaning: '' }]);
   };
 
   const updateVocabLine = (index: number, key: 'word' | 'meaning', value: string) => {
-    if (errorMessage || errorWord) { setErrorMessage(null); setErrorWord(null); }
+    clearErrors();
     const updated = [...vocabLines];
     updated[index][key] = value;
     setVocabLines(updated);
   };
 
   const removeVocabLine = (index: number) => {
-    if (errorMessage || errorWord) { setErrorMessage(null); setErrorWord(null); }
+    clearErrors();
     const updated = [...vocabLines];
     updated.splice(index, 1);
     setVocabLines(updated.length > 0 ? updated : [{ word: '', meaning: '' }]);
   };
 
   const handleSaveVocab = async () => {
-    setErrorWord(null);
-    setErrorMessage(null);
+    clearErrors();
 
     // Check for partially filled draft lines (word without meaning or meaning without word)
     const hasIncompleteDraft = vocabLines.some(
@@ -239,25 +247,39 @@ export default function DashboardScreen() {
       return;
     }
 
-    const allNormalizedEntries = [
-      ...validEntries.map(e => ({ id: undefined, word: e.word.trim().toLowerCase(), rawWord: e.word.trim() })),
-      ...modifiedWords.map(e => ({ id: e.id, word: e.word.trim().toLowerCase(), rawWord: e.word.trim() })),
-    ];
-
     // Check duplicate words within the current submission
-    const seenWordsInBatch = new Set<string>();
-    for (const item of allNormalizedEntries) {
-      if (item.word.length > 100) {
-        setErrorMessage(`"${item.rawWord}" exceeds the 100 character limit.`);
-        setErrorWord(item.word);
+    const seenWordsInBatch = new Map<string, { type: 'saved' | 'draft'; index: number }>();
+
+    for (let i = 0; i < editedSavedWords.length; i++) {
+      const rawWord = editedSavedWords[i].word.trim();
+      if (!rawWord) continue;
+      const norm = rawWord.toLowerCase();
+      if (norm.length > 100) {
+        setErrorMessage(`"${rawWord}" exceeds the 100 character limit.`);
         return;
       }
-      if (seenWordsInBatch.has(item.word)) {
-        setErrorMessage(`"${item.rawWord}" is listed more than once in your entries.`);
-        setErrorWord(item.word);
+      if (seenWordsInBatch.has(norm)) {
+        setErrorMessage(`"${rawWord}" is listed more than once in your entries.`);
+        setDuplicateSavedIndices([i]);
         return;
       }
-      seenWordsInBatch.add(item.word);
+      seenWordsInBatch.set(norm, { type: 'saved', index: i });
+    }
+
+    for (let i = 0; i < vocabLines.length; i++) {
+      const rawWord = vocabLines[i].word.trim();
+      if (!rawWord) continue;
+      const norm = rawWord.toLowerCase();
+      if (norm.length > 100) {
+        setErrorMessage(`"${rawWord}" exceeds the 100 character limit.`);
+        return;
+      }
+      if (seenWordsInBatch.has(norm)) {
+        setErrorMessage(`"${rawWord}" is listed more than once in your entries.`);
+        setDuplicateDraftIndices([i]);
+        return;
+      }
+      seenWordsInBatch.set(norm, { type: 'draft', index: i });
     }
 
     // Check meaning length limit
@@ -269,16 +291,28 @@ export default function DashboardScreen() {
     }
 
     // Check against existing words in vocabulary (excluding the word itself if editing)
-    const duplicateEntry = allNormalizedEntries.find(entry =>
-      words.some(w =>
-        w.word.toLowerCase() === entry.word && (entry.id ? w.id !== entry.id : true)
-      )
-    );
+    for (let i = 0; i < editedSavedWords.length; i++) {
+      const item = editedSavedWords[i];
+      const norm = item.word.trim().toLowerCase();
+      if (!norm) continue;
+      const isDup = words.some(w => w.word.toLowerCase() === norm && w.id !== item.id);
+      if (isDup) {
+        setErrorMessage(`"${item.word.trim()}" is already in your vocabulary.`);
+        setDuplicateSavedIndices([i]);
+        return;
+      }
+    }
 
-    if (duplicateEntry) {
-      setErrorMessage(`"${duplicateEntry.rawWord}" is already in your vocabulary.`);
-      setErrorWord(duplicateEntry.word);
-      return;
+    for (let i = 0; i < vocabLines.length; i++) {
+      const line = vocabLines[i];
+      const norm = line.word.trim().toLowerCase();
+      if (!norm) continue;
+      const isDup = words.some(w => w.word.toLowerCase() === norm);
+      if (isDup) {
+        setErrorMessage(`"${line.word.trim()}" is already in your vocabulary.`);
+        setDuplicateDraftIndices([i]);
+        return;
+      }
     }
 
     // Only allow saving drafts if we are on today's date in dashboard
@@ -376,8 +410,7 @@ export default function DashboardScreen() {
 
       resetDraftVocabLines();
       setEditedSavedWords([]);
-      setErrorMessage(null);
-      setErrorWord(null);
+      clearErrors();
       setIsVocabCardExpanded(false);
       setIsTabBarHidden(false);
       await fetchDashboardData();
@@ -388,8 +421,7 @@ export default function DashboardScreen() {
 
   const handleDeleteSavedWord = async (wordObj: any) => {
     try {
-      setErrorMessage(null);
-      setErrorWord(null);
+      clearErrors();
       await deleteWord(wordObj.id);
       await queueCloudChange(wordObj.id, 'delete', { word: wordObj.word });
       setEditedSavedWords(prev => prev.filter(w => w.id !== wordObj.id));
@@ -400,8 +432,7 @@ export default function DashboardScreen() {
   };
 
   const handleToggleExpand = () => {
-    setErrorMessage(null);
-    setErrorWord(null);
+    clearErrors();
     const nextState = !isVocabCardExpanded;
     setIsVocabCardExpanded(nextState);
     setIsTabBarHidden(nextState);
@@ -621,8 +652,7 @@ export default function DashboardScreen() {
                   {editedSavedWords.map((word, index) => {
                     const wordErr = word.word.length > 100;
                     const meaningErr = word.meaning.length > 500;
-                    const normWord = word.word.trim().toLowerCase();
-                    const isDuplicateErr = Boolean(errorWord && normWord && normWord === errorWord.toLowerCase());
+                    const isDuplicateErr = duplicateSavedIndices.includes(index);
                     const isIncompleteErr = Boolean(
                       errorMessage === 'Word and meaning fields cannot be empty.' &&
                       (!word.word.trim() || !word.meaning.trim())
@@ -631,24 +661,24 @@ export default function DashboardScreen() {
                     return (
                       <View key={`saved-${index}`} style={{ marginBottom: 14 }}>
                         <View style={s.wordRow}>
-                          <Text style={s.wordRowNum}>{index + 1}.</Text>
-                          <View style={[s.wordCardBox, hasErr && s.wordRowContentError]}>
-                            <View style={s.wordCardHeader}>
-                              <TextInput
-                                placeholder="Word"
-                                placeholderTextColor={COLORS.warmgray}
-                                style={s.wordInputSaved}
-                                value={word.word}
-                                onChangeText={(val) => {
-                                  if (errorMessage || errorWord) { setErrorMessage(null); setErrorWord(null); }
-                                  setEditedSavedWords(prev =>
-                                    prev.map((item, i) =>
-                                      i === index ? { ...item, word: val } : item
-                                    )
-                                  );
-                                }}
-                                autoCapitalize="none"
-                              />
+                           <Text style={s.wordRowNum}>{index + 1}.</Text>
+                           <View style={[s.wordCardBox, hasErr && s.wordRowContentError]}>
+                             <View style={s.wordCardHeader}>
+                               <TextInput
+                                 placeholder="Word"
+                                 placeholderTextColor={COLORS.warmgray}
+                                 style={s.wordInputSaved}
+                                 value={word.word}
+                                 onChangeText={(val) => {
+                                   clearErrors();
+                                   setEditedSavedWords(prev =>
+                                     prev.map((item, i) =>
+                                       i === index ? { ...item, word: val } : item
+                                     )
+                                   );
+                                 }}
+                                 autoCapitalize="none"
+                               />
                               <AnimatedPressable style={s.wordRowIcon} onPress={() => handleDeleteSavedWord(word)}>
                                 <Trash2 size={18} color="#E74C3C" />
                               </AnimatedPressable>
@@ -660,7 +690,7 @@ export default function DashboardScreen() {
                               style={s.meaningInputSaved}
                               value={word.meaning}
                               onChangeText={(val) => {
-                                if (errorMessage || errorWord) { setErrorMessage(null); setErrorWord(null); }
+                                clearErrors();
                                 setEditedSavedWords(prev =>
                                   prev.map((item, i) =>
                                     i === index ? { ...item, meaning: val } : item
@@ -678,7 +708,7 @@ export default function DashboardScreen() {
                             <Text style={s.inlineErrorText}>
                               {wordErr ? `Word: ${word.word.length}/100 chars ` : ''}
                               {meaningErr ? `Meaning: ${word.meaning.length}/500 chars ` : ''}
-                              {isDuplicateErr ? `"${word.word.trim()}" is already in your vocabulary ` : ''}
+                              {isDuplicateErr ? (errorMessage?.includes('more than once') ? `"${word.word.trim()}" is listed more than once ` : `"${word.word.trim()}" is already in your vocabulary `) : ''}
                               {isIncompleteErr ? `Word and meaning required ` : ''}
                             </Text>
                           </View>
@@ -690,8 +720,7 @@ export default function DashboardScreen() {
                   {vocabLines.map((line, index) => {
                     const wordErr = line.word.length > 100;
                     const meaningErr = line.meaning.length > 500;
-                    const normWord = line.word.trim().toLowerCase();
-                    const isDuplicateErr = Boolean(errorWord && normWord && normWord === errorWord.toLowerCase());
+                    const isDuplicateErr = duplicateDraftIndices.includes(index);
                     const isIncompleteErr = Boolean(
                       errorMessage === 'Word and meaning fields cannot be empty.' &&
                       ((line.word.trim() && !line.meaning.trim()) || (!line.word.trim() && line.meaning.trim()))
@@ -733,7 +762,7 @@ export default function DashboardScreen() {
                             <Text style={s.inlineErrorText}>
                               {wordErr ? `Word: ${line.word.length}/100 chars ` : ''}
                               {meaningErr ? `Meaning: ${line.meaning.length}/500 chars ` : ''}
-                              {isDuplicateErr ? `"${line.word.trim()}" is already in your vocabulary ` : ''}
+                              {isDuplicateErr ? (errorMessage?.includes('more than once') ? `"${line.word.trim()}" is listed more than once ` : `"${line.word.trim()}" is already in your vocabulary `) : ''}
                               {isIncompleteErr ? `Word and meaning required ` : ''}
                             </Text>
                           </View>
