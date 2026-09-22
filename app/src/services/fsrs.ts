@@ -6,44 +6,82 @@ const params: FSRSParameters = generatorParameters({ enable_fuzz: true });
 const f = fsrs(params);
 
 const MS_PER_HOUR = 1000 * 60 * 60;
-const MS_PER_DAY = MS_PER_HOUR * 24;
 const CUTOFF_HOUR = 4; // Anki-style 4:00 AM day rollover
 
 /**
- * Gets the adjusted "Study Date" for FSRS where hours before 4 AM belong to the previous date.
+ * Safely parses a Date object, ISO timestamp string, or YYYY-MM-DD date-only string.
+ * Prevents UTC midnight strings ("YYYY-MM-DD" or "YYYY-MM-DDT00:00:00.000Z") from shifting
+ * calendar dates backwards in negative UTC offsets or prematurely triggering the 4:00 AM cutoff.
  */
-const getStudyDate = (d: Date): Date => {
-  const adjusted = new Date(d);
-  if (adjusted.getHours() < CUTOFF_HOUR) {
-    adjusted.setDate(adjusted.getDate() - 1);
+export const parseSafeDate = (rawDate: string | Date | null | undefined): Date | null => {
+  if (!rawDate) return null;
+  if (rawDate instanceof Date) {
+    return isNaN(rawDate.getTime()) ? null : rawDate;
   }
-  return new Date(adjusted.getFullYear(), adjusted.getMonth(), adjusted.getDate());
+  if (typeof rawDate !== 'string') return null;
+
+  const trimmed = rawDate.trim();
+  if (!trimmed) return null;
+
+  // Match date-only strings or synthetic midnight ISO strings (e.g. "2026-06-01", "2026-06-01T00:00:00.000Z")
+  const dateOnlyMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ]00:00:00(?:\.000)?(?:Z|[+-]00:00)?)?$/);
+  if (dateOnlyMatch) {
+    const year = parseInt(dateOnlyMatch[1], 10);
+    const month = parseInt(dateOnlyMatch[2], 10) - 1;
+    const day = parseInt(dateOnlyMatch[3], 10);
+    // Anchor to local midday (12:00) to firmly preserve the intended calendar date across timezones
+    return new Date(year, month, day, 12, 0, 0, 0);
+  }
+
+  const d = new Date(trimmed);
+  return isNaN(d.getTime()) ? null : d;
 };
 
 /**
- * Calculates calendar days difference between two dates using an Anki-style 4:00 AM cutoff
- * and a 4-hour intra-session minimum threshold guard.
+ * Converts a Date or date string into an Anki/SuperMemo-style Integer Study Day number.
+ * Hours before 4:00 AM local time are attributed to the previous calendar day.
+ * Returns the number of discrete days elapsed since Unix epoch in local study calendar days.
  */
-const getCalendarDaysDifference = (laterDate: Date, earlierDate: Date): number => {
-  const hoursPassed = (laterDate.getTime() - earlierDate.getTime()) / MS_PER_HOUR;
-  
+export const getStudyDayNumber = (dateInput: Date | string | null | undefined): number => {
+  const d = parseSafeDate(dateInput);
+  if (!d) return 0;
+
+  const localDate = new Date(d.getTime());
+  if (localDate.getHours() < CUTOFF_HOUR) {
+    localDate.setDate(localDate.getDate() - 1);
+  }
+
+  return Math.floor(
+    Date.UTC(localDate.getFullYear(), localDate.getMonth(), localDate.getDate()) / (1000 * 60 * 60 * 24)
+  );
+};
+
+/**
+ * Calculates the difference in integer study days between two dates using Anki's integer day model.
+ * Includes a 4-hour intra-session minimum guard (if less than 4 hours passed in real time, treat as 0 days elapsed).
+ */
+export const getCalendarDaysDifference = (
+  laterDateInput: Date | string | null | undefined,
+  earlierDateInput: Date | string | null | undefined
+): number => {
+  const dLater = parseSafeDate(laterDateInput);
+  const dEarlier = parseSafeDate(earlierDateInput);
+
+  if (!dLater || !dEarlier) return 0;
+
+  const msPassed = dLater.getTime() - dEarlier.getTime();
+  const hoursPassed = msPassed / MS_PER_HOUR;
+
   // Guard against intra-session reviews crossing midnight or cutoff:
   // If less than 4 hours passed between reviews, treat as 0 days elapsed.
-  if (hoursPassed < 4) {
+  if (hoursPassed < 4 && hoursPassed >= 0) {
     return 0;
   }
 
-  const d1 = getStudyDate(laterDate);
-  const d2 = getStudyDate(earlierDate);
+  const laterDay = getStudyDayNumber(dLater);
+  const earlierDay = getStudyDayNumber(dEarlier);
 
-  return Math.max(0, Math.round((d1.getTime() - d2.getTime()) / MS_PER_DAY));
-};
-
-const parseSafeDate = (rawDateStr: string | null | undefined): Date | null => {
-  if (!rawDateStr || typeof rawDateStr !== 'string') return null;
-  const d = new Date(rawDateStr);
-  if (isNaN(d.getTime())) return null;
-  return d;
+  return Math.max(0, laterDay - earlierDay);
 };
 
 export const calculateNextFSRSState = (word: Word, ratingString: 'remember' | 'forgot'): Word => {
