@@ -438,7 +438,8 @@ async function sendOtp(req, res) {
     } else {
       const existingUser = await prisma.user.findUnique({ where: { email: normalizedEmail } });
       if (!existingUser) {
-        return res.status(404).json({ error: 'No account found with this email. Please sign up first.' });
+        // Prevent user enumeration: Return generic response without generating or sending an OTP
+        return res.json({ message: 'If this email is registered, a verification code has been sent.' });
       }
     }
 
